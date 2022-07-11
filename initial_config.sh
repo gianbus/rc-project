@@ -14,5 +14,5 @@ istioctl install --set profile=demo -y
 
 sleep 10
 
-#apply bookinfo
+#create namespace
 kubectl label namespace default istio-injection=enabled
