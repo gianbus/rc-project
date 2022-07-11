@@ -149,7 +149,7 @@ function listEvents(auth) {
     const events = res.data.items;
     //console.log(events); //print all the events, for testing
     if(events.length){
-      console.log('Upcoming 10 events:');
+      console.log('Upcoming events:');
       events.map((event, i) => {
         const start = event.start.dateTime || event.start.date;
         
@@ -173,7 +173,7 @@ function listEvents(auth) {
       });
 
     }else{
-      console.log('No upcoming events found.');
+      console.log('No upcoming events found in next 7 days.');
     }
 
   });
