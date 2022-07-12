@@ -9,13 +9,6 @@ const {Console} = require('console');
 require('dotenv').config({ path: 'api_keys.env' })
 let visualWeatherKey = process.env.VISUAL_WEATHER_KEY;
 
-////////////////////OAUTH CREDENTIALS////////////////////
-fs.readFile('credentials.json', (err, content) => {
-  if (err) return console.log('Error loading client secret file:', err);
-  // Authorize a client with credentials, then call the Google Calendar API.
-  authorize(JSON.parse(content), listEvents);
-});
-
 ////////////////////CONSTANTS////////////////////
 // If modifying these scopes, delete token.json.
 const SCOPES = ['https://www.googleapis.com/auth/calendar.readonly'];
@@ -32,29 +25,26 @@ function getLatLong(location, callback){
   let location_utf8 = location.toString("utf8"); //convert to utf8
   
   req.get(`http://nominatim.openstreetmap.org/search?format=json&q=${location_utf8}`, (err, res, body) => { //get the lat and lon of the location
-    if (err){
-      return console.log(err); //if there is an error
+    if (err) return console.log(err); //if there is an error
 
-    }else{
-      data = JSON.parse(body); //parse the json
+    data = JSON.parse(body); //parse the json
 
-      if(data.length > 0){ //location is found
-        let lat = JSON.parse(body)[0].lat; //get the lat
-        let lon = JSON.parse(body)[0].lon; //get the lon
-        return callback([lat, lon]); //callback the lat and lon
+    if(data.length > 0){ //location is found
+      let lat = JSON.parse(body)[0].lat; //get the lat
+      let lon = JSON.parse(body)[0].lon; //get the lon
+      return callback([lat, lon]); //callback the lat and lon
 
-      }else{ //location is not found
-        let splittato = location_utf8.split(/,/g); //split the location
-        if(splittato.length > 3){ //if the location is splitted
-          splittato.shift(); //remove the first element
-          return getLatLong(splittato.toString("utf8"), callback); //get the lat and lon of the second part of the location
+    }else{ //location is not found
+      let splittato = location_utf8.split(/,/g); //split the location
+      if(splittato.length > 3){ //if the location is splitted
+        splittato.shift(); //remove the first element
+        return getLatLong(splittato.toString("utf8"), callback); //get the lat and lon of the second part of the location
 
-        }else{ //if the location is not splitted
-          console.log("Location not found for the event with location: "+location); //print the location not found
-          return null;
-        }
-
+      }else{ //if the location is not splitted
+        console.log("Location not found for the event with location: "+location); //print the location not found
+        return null;
       }
+
     }
 
   });
@@ -99,61 +89,6 @@ function addDays(date, days) {
   result.setDate(result.getDate() + days);
   return result;
 }
-
-/**
- * Create an OAuth2 client with the given credentials, and then execute the
- * given callback function.
- * @param {Object} credentials The authorization client credentials.
- * @param {function} callback The callback to call with the authorized client.
- */
-function authorize(credentials, callback) {
-  const {client_secret, client_id, redirect_uris} = credentials.installed;
-  const oAuth2Client = new google.auth.OAuth2(
-      client_id, client_secret, redirect_uris[0]);
-
-  // Check if we have previously stored a token.
-  fs.readFile(TOKEN_PATH, (err, token) => {
-    if (err) return getAccessToken(oAuth2Client, callback);
-    oAuth2Client.setCredentials(JSON.parse(token));
-    callback(oAuth2Client);
-  });
-}
-
-/**
- * Get and store new token after prompting for user authorization, and then
- * execute the given callback with the authorized OAuth2 client.
- * @param {google.auth.OAuth2} oAuth2Client The OAuth2 client to get token for.
- * @param {getEventsCallback} callback The callback for the authorized client.
- */
-function getAccessToken(oAuth2Client, callback) {
-  const authUrl = oAuth2Client.generateAuthUrl({
-    access_type: 'offline',
-    scope: SCOPES,
-  });
-  console.log('Authorize this app by visiting this url:', authUrl);
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-  rl.question('Enter the code from that page here: ', (code) => {
-    rl.close();
-    oAuth2Client.getToken(code, (err, token) => {
-      if (err) return console.error('Error retrieving access token', err);
-      oAuth2Client.setCredentials(token);
-      // Store the token to disk for later program executions
-      fs.writeFile(TOKEN_PATH, JSON.stringify(token), (err) => {
-        if (err) return console.error(err);
-        console.log('Token stored to', TOKEN_PATH);
-      });
-      callback(oAuth2Client);
-    });
-  });
-}
-
-/**
- * Lists the next events on the user's primary calendar.
- * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
- */
 
 // listEvents - 
 function listEvents(auth) {
@@ -209,6 +144,74 @@ function listEvents(auth) {
 
   })
 }
+
+
+////////////////////OAUTH FUNCTIONS////////////////////
+/**
+ * Create an OAuth2 client with the given credentials, and then execute the
+ * given callback function.
+ * @param {Object} credentials The authorization client credentials.
+ * @param {function} callback The callback to call with the authorized client.
+ */
+function authorize(credentials, callback) {
+  const {client_secret, client_id, redirect_uris} = credentials.installed;
+  const oAuth2Client = new google.auth.OAuth2(
+      client_id, client_secret, redirect_uris[0]);
+
+  // Check if we have previously stored a token.
+  fs.readFile(TOKEN_PATH, (err, token) => {
+    if (err) return getAccessToken(oAuth2Client, callback);
+    oAuth2Client.setCredentials(JSON.parse(token));
+    callback(oAuth2Client);
+  });
+}
+
+/**
+ * Get and store new token after prompting for user authorization, and then
+ * execute the given callback with the authorized OAuth2 client.
+ * @param {google.auth.OAuth2} oAuth2Client The OAuth2 client to get token for.
+ * @param {getEventsCallback} callback The callback for the authorized client.
+ */
+function getAccessToken(oAuth2Client, callback) {
+  const authUrl = oAuth2Client.generateAuthUrl({
+    access_type: 'offline',
+    scope: SCOPES,
+  });
+  console.log('Authorize this app by visiting this url:', authUrl);
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+  rl.question('Enter the code from that page here: ', (code) => {
+    rl.close();
+    oAuth2Client.getToken(code, (err, token) => {
+      if (err) return console.error('Error retrieving access token', err);
+      oAuth2Client.setCredentials(token);
+      // Store the token to disk for later program executions
+      fs.writeFile(TOKEN_PATH, JSON.stringify(token), (err) => {
+        if (err) return console.error(err);
+        console.log('Token stored to', TOKEN_PATH);
+      });
+      callback(oAuth2Client);
+    });
+  });
+}
+
+/**
+ * Lists the next events on the user's primary calendar.
+ * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
+ */
+
+////////////////////END OAUTH////////////////////
+////////////////////END FUNCTIONS////////////////////
+
+
+
+fs.readFile('credentials.json', (err, content) => {
+  if (err) return console.log('Error loading client secret file:', err);
+  // Authorize a client with credentials, then call the Google Calendar API.
+  authorize(JSON.parse(content), listEvents);
+});
 
 module.exports = { 
   SCOPES,
