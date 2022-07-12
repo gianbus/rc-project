@@ -26,6 +26,7 @@ fs.readFile('credentials.json', (err, content) => {
 function getLatLong(location, callback){
   if(location === undefined) return null;
   let location_utf8 = location.toString("utf8"); //convert to utf8
+  
   req.get(`http://nominatim.openstreetmap.org/search?format=json&q=${location_utf8}`, (err, res, body) => { //get the lat and lon of the location
     if (err){
       return console.log(err); //if there is an error
@@ -43,8 +44,9 @@ function getLatLong(location, callback){
         if(splittato.length > 3){ //if the location is splitted
           splittato.shift(); //remove the first element
           return getLatLong(splittato.toString("utf8"), callback); //get the lat and lon of the second part of the location
+
         }else{ //if the location is not splitted
-          console.log("Location not found "+location); //print the location not found
+          console.log("Location not found for the event with location: "+location); //print the location not found
           return null;
         }
 
@@ -60,8 +62,12 @@ function toTimestamp(strDate){ //convert date to timestamp
 }
 
 function getWeather(lat, lon, time, callback){
-  let visualWeatherUrl = `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/${lat},${lon}/${time}?key=${visualWeatherKey}`;
-  req.get(visualWeatherUrl, (err, res, body) => {
+  console.log("Getting weather for: "+lat+" "+lon+" "+time+"...");
+  if(isMidNight(time)){ //if the event is at midnight
+    time = time + 1; //add one second 
+  }
+  let visualWeatherUrl = `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/${lat},${lon}/${time}?key=${visualWeatherKey}&include=current`;
+  return req.get(visualWeatherUrl, (err, res, body) => {
     if (err) return console.log(err);
     else{
       data = JSON.parse(body);
@@ -74,6 +80,10 @@ function farhenheitToCelsius(farhenheit){ //convert farhenheit to celsius
   return (farhenheit - 32) * 5/9; 
 }
 
+function isMidNight(timestamp){ //check if the timestamp is at midnight
+  let date = new Date(timestamp*1000);
+  return date.getHours() == 0 && date.getMinutes() == 0;
+}
 
 /**
  * Create an OAuth2 client with the given credentials, and then execute the
@@ -132,9 +142,10 @@ function addDays(date, days) { //add days to a date
 }
 
 /**
- * Lists the next 10 events on the user's primary calendar.
+ * Lists the next events on the user's primary calendar.
  * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
  */
+
 function listEvents(auth) {
   const calendar = google.calendar({version: 'v3', auth});
   calendar.events.list({
@@ -148,35 +159,45 @@ function listEvents(auth) {
 
     const events = res.data.items;
     //console.log(events); //print all the events, for testing
-    if(events.length){
+
+    if(events.length){ //if there are events
       console.log('Upcoming events:');
-      events.map((event, i) => {
+
+      events.forEach((event, i) => { //for each event
         const start = event.start.dateTime || event.start.date;
+        events[i].weather = {}; //add empty weather data to the event
         
-        if(event.location !== undefined){ //if there is a location
-          console.log(`${i} - ${start} - ${event.summary} - ${event.location}`);
-          getLatLong(event.location, ([lat, lon]) => {
-            getWeather(lat, lon, toTimestamp(start), (data) => {
-              
-              //console.log(data); //print the weather data, for testing
-              let temp = Math.round(farhenheitToCelsius(parseInt(data.days[0].temp))*10)/10; //convert to celsius and round to 1 decimal place
-              
-              console.log("La temperatura per questo evento, nella sua posizione, sarà di: "+temp+"°C"); //print the temperature
+        if(events[i].location !== undefined){ //if there is a location
+
+          console.log(i + ` - ${start} - ${event.summary}`); //print the event
+
+          getLatLong(events[i].location, ([lat, lon]) => {
             
+            getWeather(lat, lon, toTimestamp(start), (data) => {
+  
+              let temp = Math.round(farhenheitToCelsius(parseInt(data.currentConditions.temp))*10)/10; //convert to celsius and round to 1 decimal place
+              events[i].weather = data.currentConditions; //add the weather data to the event
+
             }); //get weather data
-          });
+
+          }); //get lat and lon
 
         }else{  //if there is no location
-          console.log(`${i} - ${start} - ${event.summary} - No location`);
+          console.log(`${i} - ${start} - ${event.summary} - No location`); //print the event without location
         }
 
-      });
+      }); //for each event
+
 
     }else{
-      console.log('No upcoming events found in next 7 days.');
+      console.log('No upcoming events found in next 7 days.'); //print no events found, for testing
     }
 
-  });
+    setTimeout(() => { //wait for the weather data to be added to the events
+      console.log(events);
+    },5000);
+
+  })
 }
 // [END calendar_quickstart]
 
