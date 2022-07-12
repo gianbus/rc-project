@@ -70,8 +70,7 @@ function getWeather(lat, lon, time, callback){
   return req.get(visualWeatherUrl, (err, res, body) => {
     if (err) return console.log(err);
     else{
-      data = JSON.parse(body);
-      return callback(data);
+      return callback(JSON.parse(body));
     }
   });
 }
@@ -147,6 +146,7 @@ function addDays(date, days) { //add days to a date
  */
 
 function listEvents(auth) {
+  let arrayEvents = []; //array of events
   const calendar = google.calendar({version: 'v3', auth});
   calendar.events.list({
     calendarId: 'primary',
@@ -174,9 +174,18 @@ function listEvents(auth) {
           getLatLong(events[i].location, ([lat, lon]) => {
             
             getWeather(lat, lon, toTimestamp(start), (data) => {
-  
-              let temp = Math.round(farhenheitToCelsius(parseInt(data.currentConditions.temp))*10)/10; //convert to celsius and round to 1 decimal place
-              events[i].weather = data.currentConditions; //add the weather data to the event
+              let promise = new Promise((resolve, reject) => { 
+                event.weather = data.currentConditions;
+                resolve(event);
+
+              }).then((event) => {
+                arrayEvents.splice(i, 0, event); //add the event to the array of events (the array is sorted by start time)
+
+              }).catch((err) => {
+                console.log(err);
+              })
+              //let temp = Math.round(farhenheitToCelsius(parseInt(data.currentConditions.temp))*10)/10; //convert to celsius and round to 1 decimal place
+              //add the weather data to the event
 
             }); //get weather data
 
@@ -184,18 +193,18 @@ function listEvents(auth) {
 
         }else{  //if there is no location
           console.log(`${i} - ${start} - ${event.summary} - No location`); //print the event without location
+          arrayEvents.splice(i, 0, event);
         }
 
       }); //for each event
 
+      setTimeout(() => { //wait for the weather data to be added to the events
+        console.log(events); //print the events
+      }, 5000);
 
     }else{
       console.log('No upcoming events found in next 7 days.'); //print no events found, for testing
     }
-
-    setTimeout(() => { //wait for the weather data to be added to the events
-      console.log(events);
-    },5000);
 
   })
 }
