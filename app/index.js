@@ -1,28 +1,32 @@
+////////////////////REQUIREMENTS////////////////////
 const fs = require('fs');
 const readline = require('readline');
 const {google} = require('googleapis');
 const req = require('request');
 const {Console} = require('console');
 
+////////////////////API KEYS////////////////////
 require('dotenv').config({ path: 'api_keys.env' })
-let visualWeatherKey = process.env.VISUAL_WEATHER_KEY; //get the visual weather key
+let visualWeatherKey = process.env.VISUAL_WEATHER_KEY;
 
-const MAX_ADD_DAYS = 7; //max days to add to the date
-
-// If modifying these scopes, delete token.json.
-const SCOPES = ['https://www.googleapis.com/auth/calendar.readonly'];
-// The file token.json stores the user's access and refresh tokens, and is
-// created automatically when the authorization flow completes for the first
-// time.
-const TOKEN_PATH = 'token.json';
-
-// Load client secrets from a local file.
+////////////////////OAUTH CREDENTIALS////////////////////
 fs.readFile('credentials.json', (err, content) => {
   if (err) return console.log('Error loading client secret file:', err);
   // Authorize a client with credentials, then call the Google Calendar API.
   authorize(JSON.parse(content), listEvents);
 });
 
+////////////////////CONSTANTS////////////////////
+// If modifying these scopes, delete token.json.
+const SCOPES = ['https://www.googleapis.com/auth/calendar.readonly'];
+// The file token.json stores the user's access and refresh tokens, and is
+// created automatically when the authorization flow completes for the first time.
+const TOKEN_PATH = 'token.json';
+// Max days to add to the date
+const MAX_ADD_DAYS = 7;
+
+////////////////////FUNCTIONS////////////////////
+// getLatLong - get the latitude and longitude of the event location
 function getLatLong(location, callback){
   if(location === undefined) return null;
   let location_utf8 = location.toString("utf8"); //convert to utf8
@@ -56,32 +60,44 @@ function getLatLong(location, callback){
   });
 }
 
+// toTimestamp - convert a date to a timestamp
 function toTimestamp(strDate){ //convert date to timestamp
   var datum = Date.parse(strDate);
   return datum/1000;
 }
 
+// getWeather - get the weather of the event location by using the lat and lon
 function getWeather(lat, lon, time, callback){
   console.log("Getting weather for: "+lat+" "+lon+" "+time+"...");
-  if(isMidNight(time)){ //if the event is at midnight
-    time = time + 1; //add one second 
+  if(isMidNight(time)){ //if the event is at midnight add one second
+    time = time + 1;
   }
   let visualWeatherUrl = `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/${lat},${lon}/${time}?key=${visualWeatherKey}&include=current`;
-  return req.get(visualWeatherUrl, (err, res, body) => {
+  req.get(visualWeatherUrl, (err, res, body) => {
     if (err) return console.log(err);
     else{
-      return callback(JSON.parse(body));
+      data = JSON.parse(body);
+      callback(data);
     }
   });
 }
 
-function farhenheitToCelsius(farhenheit){ //convert farhenheit to celsius
+// farhrenheitToCelsius - convert a temperature from fahrenheit to celsius
+function farhenheitToCelsius(farhenheit){
   return (farhenheit - 32) * 5/9; 
 }
 
-function isMidNight(timestamp){ //check if the timestamp is at midnight
+// isMidNight - check if the time is midnight
+function isMidNight(timestamp){
   let date = new Date(timestamp*1000);
   return date.getHours() == 0 && date.getMinutes() == 0;
+}
+
+// addDays - add days to a date and return the new date
+function addDays(date, days) {
+  var result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
 }
 
 /**
@@ -134,19 +150,13 @@ function getAccessToken(oAuth2Client, callback) {
   });
 }
 
-function addDays(date, days) { //add days to a date
-  var result = new Date(date);
-  result.setDate(result.getDate() + days);
-  return result;
-}
-
 /**
  * Lists the next events on the user's primary calendar.
  * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
  */
 
+// listEvents - 
 function listEvents(auth) {
-  let arrayEvents = []; //array of events
   const calendar = google.calendar({version: 'v3', auth});
   calendar.events.list({
     calendarId: 'primary',
@@ -169,23 +179,14 @@ function listEvents(auth) {
         
         if(events[i].location !== undefined){ //if there is a location
 
-          console.log(i + ` - ${start} - ${event.summary}`); //print the event
+          console.log(i + ` - ${start} - ${event.summary}`); //print the event Summary
 
           getLatLong(events[i].location, ([lat, lon]) => {
             
             getWeather(lat, lon, toTimestamp(start), (data) => {
-              let promise = new Promise((resolve, reject) => { 
-                event.weather = data.currentConditions;
-                resolve(event);
-
-              }).then((event) => {
-                arrayEvents.splice(i, 0, event); //add the event to the array of events (the array is sorted by start time)
-
-              }).catch((err) => {
-                console.log(err);
-              })
-              //let temp = Math.round(farhenheitToCelsius(parseInt(data.currentConditions.temp))*10)/10; //convert to celsius and round to 1 decimal place
-              //add the weather data to the event
+  
+              let temp = Math.round(farhenheitToCelsius(parseInt(data.currentConditions.temp))*10)/10; //convert to celsius and round to 1 decimal place
+              events[i].weather = data.currentConditions; //add the weather data to the event
 
             }); //get weather data
 
@@ -193,24 +194,23 @@ function listEvents(auth) {
 
         }else{  //if there is no location
           console.log(`${i} - ${start} - ${event.summary} - No location`); //print the event without location
-          arrayEvents.splice(i, 0, event);
         }
 
       }); //for each event
 
-      setTimeout(() => { //wait for the weather data to be added to the events
-        console.log(events); //print the events
-      }, 5000);
 
     }else{
       console.log('No upcoming events found in next 7 days.'); //print no events found, for testing
     }
 
+    setTimeout(() => { //wait for the weather data to be added to the events
+      console.log(events);
+    },5000);
+
   })
 }
-// [END calendar_quickstart]
 
-module.exports = {
+module.exports = { 
   SCOPES,
   listEvents,
 };
