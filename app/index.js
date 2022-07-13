@@ -93,7 +93,7 @@ function addDays(date, days) {
   return result;
 }
 
-// getEvents - 
+// getEvents - get the events from the calendar 
 function getEvents(auth, callback) {
   const calendar = google.calendar({version: 'v3', auth});
   calendar.events.list({
@@ -142,7 +142,6 @@ function linkWeatherToEvents(events){
 
       }else{ //if there is no location
         console.log(`${i} - ${start} - ${event.summary} - No location`); //print the event without location
-        console.log(counter); //print the counter
 
         if(++counter === events.length){ //if all the events have been processed
           console.log(events); //print the events
@@ -152,11 +151,9 @@ function linkWeatherToEvents(events){
 
     }); //for each event
 
-  }else{
+  }else{ //if there are no events
     console.log('No upcoming events found in next 7 days.'); //print no events found, for testing
   }
-
-  
 
 }
 
@@ -222,15 +219,16 @@ function getAccessToken(oAuth2Client, callback) {
 };
 
 ////////////////////END OAUTH////////////////////
-
 ////////////////////END FUNCTIONS////////////////////
+
+
+////////////////////START MAIN////////////////////
 
 fs.readFile('credentials.json', (err, content) => {
   if (err) return console.log('Error loading client secret file:', err);
   // Authorize a client with credentials, then call the Google Calendar API.
   authorize(JSON.parse(content), getEvents);
 });
-
 
 app.get('/', function(req, res){ //index page
   res.send("Hello World!");
@@ -243,5 +241,8 @@ app.get('/login', function(req, res){ //login page
 app.listen(80, function(){
   console.log("Server running on port 80");
 });
+
+
+////////////////////END MAIN////////////////////
 
 
