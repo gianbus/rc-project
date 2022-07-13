@@ -9,46 +9,75 @@ const { urlshortener } = require('googleapis/build/src/apis/urlshortener');
 var app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 
-let visualWeatherKey;
+let visualWeatherKey = 'f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8'; //get the visual weather key
 
+
+function apiWeatherEvents(req,res,category =""){
+  var counter = 0;
+  getLatLong(req.query.location, ([lat, lon]) => {
+      getEvents(lat, lon, req.query.date,  (body) => {
+          if(body.results.length > 0){
+            body.results.map((event) => {
+                getWeather(lat, lon, toTimestamp(event.start), (weather) => {
+                  /*if(req.query.temperature){
+                    
+                    if(weather.currentConditions.temp <= parseInt(req.query.temperature)){
+                      event.weather = weather.currentConditions;
+                      
+                    }
+                    else{
+                      body.results.shift();
+                      console.log("Event not added because the temperature is too high");
+                      console.log(event)
+                    }
+
+                  }else{*/
+                    event.weather = weather.currentConditions; //add the weather data to the event
+                  
+                  if(++counter ===body.results.length){ //if all the events have been processed
+                    
+                    res.json((body.results).filter((n)=> {
+                            n.weather.temp <= parseInt(req.query.temperature);
+                        }));
+                    console.log("All events processed"); //print all events processed
+                  }
+                })
+            })
+          }
+      },category);
+  });
+}
 
 app.get('/api/v1/weatherEvents', function(req, res) {
-    //let variabili = req.query;
-    //let location = variabili.location;
-    //let date = variabili.date;
-
-
-    getLatLong(req.query.location, ([lat, lon]) => {
-        getEvents(lat, lon, req.query.date, (body) => {
-            console.log (body.results.map((event) => {
-                getWeather(lat, lon, toTimestamp(event.start), (weather) => {
-                    return {
-                        event: event,
-                        weather: weather
-                    }
-                })
-            }))
-        }) 
-    });
-
+    apiWeatherEvents(req,res);
+});
+app.get('/api/v1/weatherEvents/concerts', function(req, res) {
+    apiWeatherEvents(req,res,"&category=concerts");
+});
+app.get('/api/v1/weatherEvents/sports', function(req, res) {
+    apiWeatherEvents(req,res,"&category=sports");
+});
+app.get('/api/v1/weatherEvents/community', function(req, res) {
+    apiWeatherEvents(req,res,"&category=community");
+});
+app.get('/api/v1/weatherEvents/underDeFresco', function(req, res) {
+    apiWeatherEvents(req,res);
 });
 
-function getEvents(lat, lon, date, callback) {
-    console.log("AAAAAAAAAAAAAA");
-    console.log(lat);
-    console.log(lon);
-    req.get({
 
-        url:''+`https://api.predicthq.com/v1/events/?end.origin=${date}&location_around.origin=${lat}%2C${lon}&start_around.origin=${date}`+'',
+function getEvents(lat, lon, date, callback,category = "") {
+    
+    req.get(
+      {
+        url:''+`https://api.predicthq.com/v1/events/?end.lte=${date}&within=10km@${lat},${lon}&start.gte=${date}${category}`+'',
         headers: {
             'Accept': 'application/json',
-            'Authorization': 'Bearer '
+            'Authorization': 'Bearer '+'f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8'
         }
-    
-    
-    }, (err, res, body) => { //get the lat and lon of the location
+
+      }, (err, res, body) => { //get the lat and lon of the location
       
-        if (err){
+      if (err){
         return console.log(err); //if there is an error
   
       }else{
@@ -71,7 +100,6 @@ function getLatLong(location, callback){
   
       }else{
         data = JSON.parse(body); //parse the json
-  
         if(data.length > 0){ //location is found
           let lat = JSON.parse(body)[0].lat; //get the lat
           let lon = JSON.parse(body)[0].lon; //get the lon
@@ -110,9 +138,12 @@ function getWeather(lat, lon, time, callback){
     });
   }
 
+
+
+
   function toTimestamp(strDate){ //convert date to timestamp
-    var datum = Date.parse(strDate);
-    return datum/1000;
+    var date = new Date(strDate);
+    return date.getTime()/1000 + date.getTimezoneOffset()*60;
   }
 
 
