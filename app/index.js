@@ -4,6 +4,8 @@ const readline = require('readline');
 const {google} = require('googleapis');
 const req = require('request');
 const {Console} = require('console');
+const express = require('express');
+let app = express();
 
 ////////////////////API KEYS////////////////////
 require('dotenv').config({ path: 'api_keys.env' })
@@ -202,10 +204,13 @@ function getAccessToken(oAuth2Client, callback) {
  * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
  */
 
+ module.exports = { 
+  SCOPES,
+  listEvents,
+};
+
 ////////////////////END OAUTH////////////////////
 ////////////////////END FUNCTIONS////////////////////
-
-
 
 fs.readFile('credentials.json', (err, content) => {
   if (err) return console.log('Error loading client secret file:', err);
@@ -213,7 +218,14 @@ fs.readFile('credentials.json', (err, content) => {
   authorize(JSON.parse(content), listEvents);
 });
 
-module.exports = { 
-  SCOPES,
-  listEvents,
-};
+app.get('/', function(req, res){ //index page
+  res.send("Hello World!");
+});
+
+app.get('/login', function(req, res){ //login page
+  res.send("Login Page");
+});
+
+app.listen(80, function(){
+  console.log("Server running on port 80");
+});
