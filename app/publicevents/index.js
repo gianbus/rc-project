@@ -9,73 +9,56 @@ const { urlshortener } = require('googleapis/build/src/apis/urlshortener');
 var app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 
-let visualWeatherKey = 'f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8'; //get the visual weather key
+////////////////////API KEYS////////////////////
+require('dotenv').config({ path: '../api_keys.env' })
+let visualWeatherKey = process.env.VISUAL_WEATHER_KEY;
+let PREDICT_KEY = process.env.PREDICT_KEY;
 
 
+/////////////////////FUNCTIONS////////////////////
 function apiWeatherEvents(req,res,category =""){
-  var counter = 0;
-  getLatLong(req.query.location, ([lat, lon]) => {
-      getEvents(lat, lon, req.query.date,  (body) => {
-          if(body.results.length > 0){
-            body.results.map((event) => {
-                getWeather(lat, lon, toTimestamp(event.start), (weather) => {
-                  /*if(req.query.temperature){
+  if(req.query.location === undefined){
+    res.json({});
+  }else{
+    var counter = 0;
+    getLatLong(req.query.location, ([lat, lon]) => {
+        getEvents(lat, lon, req.query.date,  (body) => {
+            if(body.results.length > 0){
+              body.results.map((event) => {
+                  getWeather(lat, lon, toTimestamp(event.start), (weather) => {
                     
-                    if(weather.currentConditions.temp <= parseInt(req.query.temperature)){
-                      event.weather = weather.currentConditions;
-                      
-                    }
-                    else{
-                      body.results.shift();
-                      console.log("Event not added because the temperature is too high");
-                      console.log(event)
-                    }
-
-                  }else{*/
-                  if(weather != null)
-                    event.weather = weather.currentConditions; //add the weather data to the event
-                  
-                  if(++counter ===body.results.length){ //if all the events have been processed
+                    if(weather != null)
+                      event.weather = weather.currentConditions; //add the weather data to the event
                     
-                    res.json((body.results).filter((n)=> {
-                            n.weather.temp <= parseInt(req.query.temperature);
-                        }));
-                    console.log("All events processed"); //print all events processed
-                  }
-                })
-            })
-          }
-      },category);
-  });
+                    if(++counter === body.results.length){ //if all the events have been processed
+                      if(req.query.maxtemperature && req.query.mintemperature){ //if the max and min temperature are requested
+                        res.json((body.results).filter((n)=> n.weather.temp <= req.query.maxtemperature && n.weather.temp >= req.query.mintemperature)); 
+                      }else if(req.query.mintemperature){
+                        res.json((body.results).filter((n)=> n.weather.temp >= req.query.mintemperature)); 
+                      }else if(req.query.maxtemperature){   
+                        res.json((body.results).filter((n)=> n.weather.temp <= req.query.maxtemperature)); 
+                      }else{
+                        res.json(body.results);
+                      }
+                      console.log("All events processed"); //print all events processed
+                    }
+                    
+                  })
+              })
+            }
+        },category);
+    });
+  }
 }
 
-app.get('/api/v1/weatherEvents', function(req, res) {
-    apiWeatherEvents(req,res);
-});
-app.get('/api/v1/weatherEvents/concerts', function(req, res) {
-    apiWeatherEvents(req,res,"&category=concerts");
-});
-app.get('/api/v1/weatherEvents/sports', function(req, res) {
-    apiWeatherEvents(req,res,"&category=sports");
-});
-app.get('/api/v1/weatherEvents/community', function(req, res) {
-    apiWeatherEvents(req,res,"&category=community");
-});
-app.get('/api/v1/weatherEvents/underDeFresco', function(req, res) {
-    apiWeatherEvents(req,res);
-});
-
-
 function getEvents(lat, lon, date, callback,category = "") {
-    
     req.get(
       {
-        url:''+`https://api.predicthq.com/v1/events/?end.lte=${date}&within=10km@${lat},${lon}&start.gte=${date}${category}`+'',
+        url:''+`https://api.predicthq.com/v1/events/?end.lte=${date}&within=40km@${lat},${lon}&start.gte=${date}${category}`+'',
         headers: {
             'Accept': 'application/json',
-            'Authorization': 'Bearer '+'f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8'
+            'Authorization': 'Bearer '+ PREDICT_KEY
         }
-
       }, (err, res, body) => { //get the lat and lon of the location
       
       if (err){
@@ -86,7 +69,6 @@ function getEvents(lat, lon, date, callback,category = "") {
         callback (JSON.parse(body))
 
     }
-
 
 })
 }
@@ -123,7 +105,6 @@ function getLatLong(location, callback){
     });
 }
 
-
 function getWeather(lat, lon, time, callback){
     if(lat === null || lon === null) return null;
     console.log("Getting weather for: "+lat+" "+lon+" "+time+"...");
@@ -138,25 +119,35 @@ function getWeather(lat, lon, time, callback){
         return callback(data);
       }
     });
-  }
+}
 
+function toTimestamp(strDate){ //convert date to timestamp
+  var date = new Date(strDate);
+  return date.getTime()/1000 + date.getTimezoneOffset()*60;
+}
 
+function farhenheitToCelsius(farhenheit){ //convert farhenheit to celsius
+  return (farhenheit - 32) * 5/9; 
+}
 
+function isMidNight(timestamp){ //check if the timestamp is at midnight
+  let date = new Date(timestamp*1000);
+  return date.getHours() == 0 && date.getMinutes() == 0;
+}
 
-  function toTimestamp(strDate){ //convert date to timestamp
-    var date = new Date(strDate);
-    return date.getTime()/1000 + date.getTimezoneOffset()*60;
-  }
+/////////////////////API CALLS////////////////////
 
+app.get('/api/v1/weatherEvents', function(req, res) {
+  apiWeatherEvents(req,res);
+});
+app.get('/api/v1/weatherEvents/concerts', function(req, res) {
+  apiWeatherEvents(req,res,"&category=concerts");
+});
+app.get('/api/v1/weatherEvents/sports', function(req, res) {
+  apiWeatherEvents(req,res,"&category=sports");
+});
+app.get('/api/v1/weatherEvents/community', function(req, res) {
+  apiWeatherEvents(req,res,"&category=community");
+});
 
-  function farhenheitToCelsius(farhenheit){ //convert farhenheit to celsius
-    return (farhenheit - 32) * 5/9; 
-  }
-  
-  function isMidNight(timestamp){ //check if the timestamp is at midnight
-    let date = new Date(timestamp*1000);
-    return date.getHours() == 0 && date.getMinutes() == 0;
-  }
-
-
-app.listen(8889);
+app.listen(80);
