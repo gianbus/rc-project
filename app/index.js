@@ -45,7 +45,7 @@ function getLatLong(location, callback){
 
       }else{ //if the location is not splitted
         console.log("Location not found for the event with location: "+location); //print the location not found
-        return callback(null,null); //callback null
+        return callback([null,null]); //callback null
       }
 
     }
