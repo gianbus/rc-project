@@ -79,6 +79,9 @@ function getWeather(lat, lon, time, callback){
       if (err) return console.log(err);
       else{
         data = JSON.parse(body);
+        console.log(lon);
+        data.currentConditions.lon = lon;
+        data.currentConditions.lat = lat;
         callback(data);
       }
     });
@@ -249,6 +252,12 @@ app.get('/image', function(req, res){ //index page
   
   if(req.query.img)
     res.sendFile( __dirname + '/views/icons/'+ req.query.img + '.png');
+});
+
+app.get('/weather', function(req, res){ //index page
+  getWeather(req.query.lat, req.query.lon, req.query.timestamp, (data) => {
+    res.send(data);
+  });
 });
 
 app.listen(80, function(){

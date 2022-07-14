@@ -153,3 +153,8 @@ body {
 .current {
   font-weight: bold;
 }
+
+a {
+  text-decoration: none;
+  color: #000;
+}
