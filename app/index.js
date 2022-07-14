@@ -13,6 +13,17 @@ require('dotenv').config({ path: 'api_keys.env' })
 let visualWeatherKey = process.env.VISUAL_WEATHER_KEY;
 
 ////////////////////CONSTANTS////////////////////
+const credentials = {
+  installed: {
+    client_id: process.env.CLIENT_ID,
+    client_secret: process.env.CLIENT_SECRET,
+    redirect_uris: [process.env.REDIRECT_URIS]
+  }
+}
+const {client_secret, client_id, redirect_uris} = credentials.installed;
+const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
+
+
 // If modifying these scopes, delete token.json.
 const SCOPES = ['https://www.googleapis.com/auth/calendar.readonly'];
 // The file token.json stores the user's access and refresh tokens, and is
@@ -61,20 +72,21 @@ function toTimestamp(strDate){ //convert date to timestamp
 
 // getWeather - get the weather of the event location by using the lat and lon
 function getWeather(lat, lon, time, callback){
-  if(lat === undefined || lon === undefined) return callback({}); //if the lat or lon is undefined
-
-  console.log("Getting weather for: "+lat+" "+lon+" "+time+"...");
-  if(isMidNight(time)){ //if the event is at midnight add one second
-    time = time + 1;
-  }
-  let visualWeatherUrl = `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/${lat},${lon}/${time}?key=${visualWeatherKey}&include=current`;
-  req.get(visualWeatherUrl, (err, res, body) => {
-    if (err) return console.log(err);
-    else{
-      data = JSON.parse(body);
-      callback(data);
+  if(lat == null || lon == null) return callback(null); //if the lat or lon is undefined
+  else{
+    console.log("Getting weather for: "+lat+" "+lon+" "+time+"...");
+    if(isMidNight(time)){ //if the event is at midnight add one second
+      time = time + 1;
     }
-  });
+    let visualWeatherUrl = `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/${lat},${lon}/${time}?key=${visualWeatherKey}&include=current`;
+    req.get(visualWeatherUrl, (err, res, body) => {
+      if (err) return console.log(err);
+      else{
+        data = JSON.parse(body);
+        callback(data);
+      }
+    });
+  }
 }
 
 // farhrenheitToCelsius - convert a temperature from fahrenheit to celsius
@@ -96,8 +108,9 @@ function addDays(date, days) {
 }
 
 // getEvents - get the events from the calendar 
-function getEvents(auth, callback) {
-  const calendar = google.calendar({version: 'v3', auth});
+function getEvents(response, callback) {
+  
+  const calendar = google.calendar({version: 'v3', oAuth2Client});
   calendar.events.list({
     calendarId: 'primary',
     timeMin: (new Date()).toISOString(),
@@ -106,12 +119,12 @@ function getEvents(auth, callback) {
     orderBy: 'startTime',
   }, (err, res) => {
     if (err) return console.log('The API returned an error: ' + err);
-    callback(res.data.items);
+    callback(response, res.data.items);
   })
 }
 
 //get the events and link the weather to them
-function linkWeatherToEvents(events){
+function linkWeatherToEvents(response, events){
   //console.log(events); //print all the events, for testing
   var counter = 0;
   if(events.length){ //if there are events
@@ -128,13 +141,14 @@ function linkWeatherToEvents(events){
         getLatLong(events[i].location, ([lat, lon]) => {
           
           getWeather(lat, lon, toTimestamp(start), (data) => {
-
-            let temp = Math.round(farhenheitToCelsius(parseInt(data.currentConditions.temp))*10)/10; //convert to celsius and round to 1 decimal place
-            events[i].weather = data.currentConditions; //add the weather data to the event
-            console.log(counter); //print the counter
-          
+            if(data ==null){
+              let temp = Math.round(farhenheitToCelsius(parseInt(data.currentConditions.temp))*10)/10; //convert to celsius and round to 1 decimal place
+              events[i].weather = data.currentConditions; //add the weather data to the event
+            }
             if(++counter ===events.length){ //if all the events have been processed
               console.log(events); //print the events
+              response.send(events); //send the events to the client
+
               console.log("All events processed"); //print all events processed
             }
 
@@ -147,6 +161,7 @@ function linkWeatherToEvents(events){
 
         if(++counter === events.length){ //if all the events have been processed
           console.log(events); //print the events
+          response.send(events); //send the events to the client
           console.log("All events processed"); //print all events processed
         }
       }
@@ -155,61 +170,31 @@ function linkWeatherToEvents(events){
 
   }else{ //if there are no events
     console.log('No upcoming events found in next 7 days.'); //print no events found, for testing
+    response.send('No upcoming events found in next 7 days.'); //send no events to the client
   }
 
 }
 
 ////////////////////OAUTH FUNCTIONS////////////////////
-/**
- * Create an OAuth2 client with the given credentials, and then execute the
- * given callback function.
- * @param {Object} credentials The authorization client credentials.
- * @param {function} callback The callback to call with the authorized client.
- */
-function authorize(credentials, callback) {
-  const {client_secret, client_id, redirect_uris} = credentials.installed;
-  const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
-
+// getNewToken - get a new token from the google api
+function authorize(res, callback) {
   // Check if we have previously stored a token.
   fs.readFile(TOKEN_PATH, (err, token) => {
     //if there is not a stored token, get the access token
-    if (err) return getAccessToken(oAuth2Client, callback); 
+    if (err) return getAccessCode(res); 
     oAuth2Client.setCredentials(JSON.parse(token));
-    callback(oAuth2Client, linkWeatherToEvents);
+    callback(res,linkWeatherToEvents);
   });
 }
 
-/**
- * Get and store new token after prompting for user authorization, and then
- * execute the given callback with the authorized OAuth2 client.
- * @param {google.auth.OAuth2} oAuth2Client The OAuth2 client to get token for.
- * @param {getEventsCallback} callback The callback for the authorized client.
- */
-function getAccessToken(oAuth2Client, callback) {
+// getAccessCode - get the access code from the user
+function getAccessCode(res){
   const authUrl = oAuth2Client.generateAuthUrl({
     access_type: 'offline',
     scope: SCOPES,
   });
-  console.log('Authorize this app by visiting this url:', authUrl);
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-  rl.question('Enter the code from that page here: ', (code) => {
-    rl.close();
-    oAuth2Client.getToken(code, (err, token) => {
-      if (err) return console.error('Error retrieving access token', err);
-      oAuth2Client.setCredentials(token);
-      // Store the token to disk for later program executions
-      fs.writeFile(TOKEN_PATH, JSON.stringify(token), (err) => {
-        if (err) return console.error(err);
-        console.log('Token stored to', TOKEN_PATH);
-      });
-      callback(oAuth2Client);
-    });
-  });
+  res.send("<br><br><button onclick='window.location.href=\""+ authUrl +"\"'>Log in with Calendar</button>");
 }
-
 /**
  * Lists the next events on the user's primary calendar.
  * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
@@ -226,18 +211,24 @@ function getAccessToken(oAuth2Client, callback) {
 
 ////////////////////START MAIN////////////////////
 
-fs.readFile('credentials.json', (err, content) => {
-  if (err) return console.log('Error loading client secret file:', err);
-  // Authorize a client with credentials, then call the Google Calendar API.
-  authorize(JSON.parse(content), getEvents);
-});
-
-app.get('/', function(req, res){ //index page
-  res.send("Hello World!");
-});
-
 app.get('/login', function(req, res){ //login page
+    authorize(res, getEvents);
+});
+app.get('/oAuth2/getToken', function(req, res){ //login page
   res.send("Login Page");
+});
+app.get('/', function(req, res){ //login page
+  oAuth2Client.getToken(req.query.code, (err, token) => {
+    if (err) return console.error('Error retrieving access token', err);
+    oAuth2Client.setCredentials(token);
+    // Store the token to disk for later program executions
+    fs.writeFile(TOKEN_PATH, JSON.stringify(token), (err) => {
+      if (err) return console.error(err);
+      console.log('Token stored to', TOKEN_PATH);
+    });
+    getEvents(res,linkWeatherToEvents);
+  });
+  
 });
 
 app.listen(80, function(){
