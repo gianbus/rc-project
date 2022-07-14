@@ -32,6 +32,7 @@ function apiWeatherEvents(req,res,category =""){
                     }
 
                   }else{*/
+                  if(weather != null)
                     event.weather = weather.currentConditions; //add the weather data to the event
                   
                   if(++counter ===body.results.length){ //if all the events have been processed
@@ -113,7 +114,7 @@ function getLatLong(location, callback){
   
           }else{ //if the location is not splitted
             console.log("Location not found for the event with location: "+location); //print the location not found
-            return null;
+            return callback([null,null]); //callback null
           }
   
         }
@@ -124,6 +125,7 @@ function getLatLong(location, callback){
 
 
 function getWeather(lat, lon, time, callback){
+    if(lat === null || lon === null) return null;
     console.log("Getting weather for: "+lat+" "+lon+" "+time+"...");
     if(isMidNight(time)){ //if the event is at midnight
       time = time + 1; //add one second 

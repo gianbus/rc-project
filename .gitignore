@@ -4,3 +4,4 @@ token.json
 app/test.json
 app/index_with_promises.js
 app/prova.js
+app/node_modules/*
