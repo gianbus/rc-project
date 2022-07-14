@@ -4,6 +4,7 @@
 
 body {
   background: #fff;
+  margin: 0px;
 }
 
 .container {
@@ -43,7 +44,7 @@ body {
 .content {
   display: grid;
   grid-template-columns: 3em 10px repeat(7, 1fr);
-  grid-template-rows: repeat(24, 3em);
+  grid-template-rows: repeat(24, 5em);
 }
 
 .time {
@@ -92,8 +93,17 @@ body {
 }
 
 .calendar1 {
+  padding: 10px;
+  margin: 5px;
   background-color: #d7dbef;
   border-color: #bcc3e5;
+  border-radius: 10px;
+}
+.calendar1:hover{
+  border: 1px solid #bcc3e5;
+  transition: 1s;
+   /*gradient*/
+  background: linear-gradient(to right, #bcc3e5, #d7dbef); 
 }
 
 .calendar2 {

@@ -206,21 +206,27 @@ module.exports = {
 
 app.get('/', function(req, res){ //index page
   console.log(req.cookies);
-
+  
+    
   if(req.query.code){ //if there is a code
     let oAuth2Client = new google.auth.OAuth2(
       client_id,
       client_secret,
       redirect_uris[0]
     );
-    oAuth2Client.getToken(req.query.code, (err, token) => {
-      if (err) return console.error('Error retrieving access token', err);
-      oAuth2Client.setCredentials(token);
-      // no: set a new cookie
-      res.cookie('cookieToken',JSON.stringify(token), { maxAge: 900000, httpOnly: true });
-      console.log('cookieToken created successfully');
-      getEvents(oAuth2Client, linkWeatherToEvents, res);
-    });
+    if(req.cookies.cookieToken !== undefined){ //if there is cookie
+      authorize(req, res, getEvents);
+    }else{
+      oAuth2Client.getToken(req.query.code, (err, token) => {
+        if (err) return console.error('Error retrieving access token', err);
+        oAuth2Client.setCredentials(token);
+        // no: set a new cookie
+        res.cookie('cookieToken',JSON.stringify(token), { maxAge: 900000, httpOnly: true });
+        console.log('cookieToken created successfully');
+        res.redirect('/');
+      });
+    }
+    
 
   }else{
     authorize(req, res, getEvents);
@@ -239,6 +245,11 @@ app.get('/test', function(req, res){ //index page
   res.render('index', { lacacca: 'cacca' });
 });
 
+app.get('/image', function(req, res){ //index page
+  
+  if(req.query.img)
+    res.sendFile( __dirname + '/views/icons/'+ req.query.img + '.png');
+});
 
 app.listen(80, function(){
   console.log("Server running on port 80");

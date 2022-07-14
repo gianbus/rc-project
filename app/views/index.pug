@@ -50,9 +50,26 @@ html
     each event in events
         - ora_inizio = (new Date (event.start.dateTime)).getHours()+1
         - ora_fine = (new Date (event.end.dateTime)).getHours()+1
-        - differenza = ora_fine - ora_inizio
-        - giorno = 3+Math.abs((new Date()).getDay()-(new Date (event.start.dateTime)).getDay()) //0-6 (domenica-sabato)
-        .event.calendar1(style='grid-column:'+ giorno + ';grid-row:'+ ora_inizio +'/span '+differenza+';')
+        if(ora_inizio)
+          - differenza = ora_fine - ora_inizio
+        else
+          - differenza = 24
+          - ora_inizio = 1
+          
+        - var count = Object.keys(event.start).length
+        - var start = 0
+        if(count == 1)
+          - start = event.start.date
+        else
+          - start = event.start.dateTime
+
+        - giorno = 3+Math.abs((new Date()).getDate()-(new Date (start)).getDate()) //0-6 (domenica-sabato)
+        .event.calendar1(style='grid-column:'+ giorno + ';grid-row:'+ ora_inizio +'/span '+differenza+';') #{event.summary} #{event.start.dateTime} 
+          if(Object.keys(event.weather).length > 0)
+            - var farenheitToCelsius =  (event.weather.temp - 32) * 5 / 9 
+            img(src="image?img="+event.weather.icon)
+            div #{farenheitToCelsius.toFixed(1)}°C
+        
 
     //.event.event1.calendar1 Event 1
     //.event.event2.calendar2 Event 2
