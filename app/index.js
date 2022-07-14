@@ -9,10 +9,16 @@ const cookieParser = require('cookie-parser');
 const { container } = require('googleapis/build/src/apis/container');
 let app = express();
 app.use(cookieParser());
+app.set('view engine', 'pug');
+app.set('views', './views');
 
 ////////////////////API KEYS////////////////////
 require('dotenv').config({ path: 'api_keys.env' })
 let visualWeatherKey = process.env.VISUAL_WEATHER_KEY;
+// credentials - get the credentials from the token file
+const client_id = process.env.CLIENT_ID;
+const client_secret = process.env.CLIENT_SECRET;
+const redirect_uris = [process.env.REDIRECT_URIS];
 
 ////////////////////CONSTANTS////////////////////
 // If modifying these scopes, delete token.json.
@@ -23,11 +29,6 @@ const TOKEN_PATH = 'token.json';
 // Max days to add to the date
 const MAX_ADD_DAYS = 7;
 
-// credentials - get the credentials from the token file
-const client_id = process.env.CLIENT_ID;
-const client_secret = process.env.CLIENT_SECRET;
-const redirect_uris = [process.env.REDIRECT_URIS];
-
 ////////////////////FUNCTIONS////////////////////
 // getLatLong - get the latitude and longitude of the event location
 function getLatLong(location, callback){
@@ -36,7 +37,6 @@ function getLatLong(location, callback){
   
   req.get(`http://nominatim.openstreetmap.org/search?format=json&q=${location_utf8}`, (err, res, body) => { //get the lat and lon of the location
     if (err) return console.log(err); //if there is an error
-
     data = JSON.parse(body); //parse the json
 
     if(data.length > 0){ //location is found
@@ -142,7 +142,8 @@ function linkWeatherToEvents(res, events){
             }
           
             if(++counter ===events.length){ //if all the events have been processed
-              res.send(events); //send the events to the client
+              console.log(events);
+              res.render('index', { events }); //send the events to the client
               console.log("All events processed"); //print all events processed
             }
 
@@ -178,18 +179,7 @@ function authorize(req, res, callback) {
     console.log('cookie exists', req.cookies.cookieToken);
     oAuth2Client.setCredentials(JSON.parse(req.cookies.cookieToken));
     callback(oAuth2Client, linkWeatherToEvents, res);
-  } 
-
- /*
-  // Check if we have previously stored a token.
-  fs.readFile(TOKEN_PATH, (err, token) => {
-    //if there is not a stored token, get the access token
-    if (err) return getAccessToken(res, oAuth2Client, callback);
-    oAuth2Client.setCredentials(JSON.parse(token));
-    callback(oAuth2Client, linkWeatherToEvents, res);
-  });
-  */
-
+  }
 }
 
 // getAccessToken - get the access token
@@ -201,10 +191,9 @@ function getAccessToken(res, oAuth2Client, callback) {
   });
 
   res.send("<a href='" + authUrl + "'>Click here to authorize</a>");
-
 }
 
- module.exports = { 
+module.exports = { 
   SCOPES,
   getEvents,
 };
@@ -239,9 +228,17 @@ app.get('/', function(req, res){ //index page
 
 });
 
-app.get('/app', function(req, res){ //login page
-  
+
+app.get('/logout', function(req, res){ //index page
+  console.log(req.cookies);
+  res.clearCookie('cookieToken');
+  res.redirect('/');
 });
+
+app.get('/test', function(req, res){ //index page
+  res.render('index', { lacacca: 'cacca' });
+});
+
 
 app.listen(80, function(){
   console.log("Server running on port 80");
