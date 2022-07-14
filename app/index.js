@@ -45,7 +45,7 @@ function getLatLong(location, callback){
 
       }else{ //if the location is not splitted
         console.log("Location not found for the event with location: "+location); //print the location not found
-        return null;
+        return callback(null,null); //callback null
       }
 
     }
@@ -61,6 +61,8 @@ function toTimestamp(strDate){ //convert date to timestamp
 
 // getWeather - get the weather of the event location by using the lat and lon
 function getWeather(lat, lon, time, callback){
+  if(lat === undefined || lon === undefined) return callback({}); //if the lat or lon is undefined
+
   console.log("Getting weather for: "+lat+" "+lon+" "+time+"...");
   if(isMidNight(time)){ //if the event is at midnight add one second
     time = time + 1;
