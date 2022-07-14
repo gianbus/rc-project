@@ -5,8 +5,10 @@ const {google} = require('googleapis');
 const req = require('request');
 const {Console} = require('console');
 const express = require('express');
+const cookieParser = require('cookie-parser');
 const { container } = require('googleapis/build/src/apis/container');
 let app = express();
+app.use(cookieParser());
 
 ////////////////////API KEYS////////////////////
 require('dotenv').config({ path: 'api_keys.env' })
@@ -166,9 +168,19 @@ function linkWeatherToEvents(res, events){
 }
 
 ////////////////////OAUTH FUNCTIONS////////////////////
-function authorize(res, callback) {
+function authorize(req, res, callback) {
   const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
+  if(req.cookies.cookieToken === undefined){
+    console.log("non esiste cookie");
+    return getAccessToken(res, oAuth2Client, callback); //get the access token
+  }else{
+    // yes, cookie was already present 
+    console.log('cookie exists', req.cookies.cookieToken);
+    oAuth2Client.setCredentials(JSON.parse(req.cookies.cookieToken));
+    callback(oAuth2Client, linkWeatherToEvents, res);
+  } 
 
+ /*
   // Check if we have previously stored a token.
   fs.readFile(TOKEN_PATH, (err, token) => {
     //if there is not a stored token, get the access token
@@ -176,10 +188,13 @@ function authorize(res, callback) {
     oAuth2Client.setCredentials(JSON.parse(token));
     callback(oAuth2Client, linkWeatherToEvents, res);
   });
+  */
+
 }
 
 // getAccessToken - get the access token
 function getAccessToken(res, oAuth2Client, callback) {
+
   const authUrl = oAuth2Client.generateAuthUrl({
     access_type: 'offline',
     scope: SCOPES,
@@ -201,7 +216,8 @@ function getAccessToken(res, oAuth2Client, callback) {
 ////////////////////START MAIN////////////////////
 
 app.get('/', function(req, res){ //index page
-  
+  console.log(req.cookies);
+
   if(req.query.code){ //if there is a code
     let oAuth2Client = new google.auth.OAuth2(
       client_id,
@@ -211,16 +227,14 @@ app.get('/', function(req, res){ //index page
     oAuth2Client.getToken(req.query.code, (err, token) => {
       if (err) return console.error('Error retrieving access token', err);
       oAuth2Client.setCredentials(token);
-      // Store the token to disk for later program executions
-      fs.writeFile(TOKEN_PATH, JSON.stringify(token), (err) => {
-        if (err) return console.error(err);
-        console.log('Token stored to', TOKEN_PATH);
-      });
+      // no: set a new cookie
+      res.cookie('cookieToken',JSON.stringify(token), { maxAge: 900000, httpOnly: true });
+      console.log('cookieToken created successfully');
       getEvents(oAuth2Client, linkWeatherToEvents, res);
     });
 
   }else{
-    authorize(res, getEvents);
+    authorize(req, res, getEvents);
   }
 
 });
