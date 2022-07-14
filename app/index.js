@@ -5,12 +5,20 @@ const {google} = require('googleapis');
 const req = require('request');
 const {Console} = require('console');
 const express = require('express');
+const cookieParser = require('cookie-parser');
 const { container } = require('googleapis/build/src/apis/container');
 let app = express();
+app.use(cookieParser());
+app.set('view engine', 'pug');
+app.set('views', './views');
 
 ////////////////////API KEYS////////////////////
 require('dotenv').config({ path: 'api_keys.env' })
 let visualWeatherKey = process.env.VISUAL_WEATHER_KEY;
+// credentials - get the credentials from the token file
+const client_id = process.env.CLIENT_ID;
+const client_secret = process.env.CLIENT_SECRET;
+const redirect_uris = [process.env.REDIRECT_URIS];
 
 ////////////////////CONSTANTS////////////////////
 // If modifying these scopes, delete token.json.
@@ -19,7 +27,7 @@ const SCOPES = ['https://www.googleapis.com/auth/calendar.readonly'];
 // created automatically when the authorization flow completes for the first time.
 const TOKEN_PATH = 'token.json';
 // Max days to add to the date
-const MAX_ADD_DAYS = 7;
+const MAX_ADD_DAYS = 6;
 
 ////////////////////FUNCTIONS////////////////////
 // getLatLong - get the latitude and longitude of the event location
@@ -29,7 +37,6 @@ function getLatLong(location, callback){
   
   req.get(`http://nominatim.openstreetmap.org/search?format=json&q=${location_utf8}`, (err, res, body) => { //get the lat and lon of the location
     if (err) return console.log(err); //if there is an error
-
     data = JSON.parse(body); //parse the json
 
     if(data.length > 0){ //location is found
@@ -45,7 +52,7 @@ function getLatLong(location, callback){
 
       }else{ //if the location is not splitted
         console.log("Location not found for the event with location: "+location); //print the location not found
-        return null;
+        return callback([null,null]); //callback null
       }
 
     }
@@ -61,18 +68,24 @@ function toTimestamp(strDate){ //convert date to timestamp
 
 // getWeather - get the weather of the event location by using the lat and lon
 function getWeather(lat, lon, time, callback){
-  console.log("Getting weather for: "+lat+" "+lon+" "+time+"...");
-  if(isMidNight(time)){ //if the event is at midnight add one second
-    time = time + 1;
-  }
-  let visualWeatherUrl = `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/${lat},${lon}/${time}?key=${visualWeatherKey}&include=current`;
-  req.get(visualWeatherUrl, (err, res, body) => {
-    if (err) return console.log(err);
-    else{
-      data = JSON.parse(body);
-      callback(data);
+  if(lat == null|| lon == null) return callback(null); //if the lat or lon is undefined
+  else{
+    console.log("Getting weather for: "+lat+" "+lon+" "+time+"...");
+    if(isMidNight(time)){ //if the event is at midnight add one second
+      time = time + 1;
     }
-  });
+    let visualWeatherUrl = `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/${lat},${lon}/${time}?key=${visualWeatherKey}&include=current`;
+    req.get(visualWeatherUrl, (err, res, body) => {
+      if (err) return console.log(err);
+      else{
+        data = JSON.parse(body);
+        console.log(lon);
+        data.currentConditions.lon = lon;
+        data.currentConditions.lat = lat;
+        callback(data);
+      }
+    });
+  }
 }
 
 // farhrenheitToCelsius - convert a temperature from fahrenheit to celsius
@@ -94,7 +107,7 @@ function addDays(date, days) {
 }
 
 // getEvents - get the events from the calendar 
-function getEvents(auth, callback) {
+function getEvents(auth, callback, response) {
   const calendar = google.calendar({version: 'v3', auth});
   calendar.events.list({
     calendarId: 'primary',
@@ -104,12 +117,12 @@ function getEvents(auth, callback) {
     orderBy: 'startTime',
   }, (err, res) => {
     if (err) return console.log('The API returned an error: ' + err);
-    callback(res.data.items);
+    callback(response, res.data.items);
   })
 }
 
 //get the events and link the weather to them
-function linkWeatherToEvents(events){
+function linkWeatherToEvents(res, events){
   //console.log(events); //print all the events, for testing
   var counter = 0;
   if(events.length){ //if there are events
@@ -126,13 +139,14 @@ function linkWeatherToEvents(events){
         getLatLong(events[i].location, ([lat, lon]) => {
           
           getWeather(lat, lon, toTimestamp(start), (data) => {
-
-            let temp = Math.round(farhenheitToCelsius(parseInt(data.currentConditions.temp))*10)/10; //convert to celsius and round to 1 decimal place
-            events[i].weather = data.currentConditions; //add the weather data to the event
-            console.log(counter); //print the counter
+            if(data != null){ //if the weather is found
+              let temp = Math.round(farhenheitToCelsius(parseInt(data.currentConditions.temp))*10)/10; //convert to celsius and round to 1 decimal place
+              events[i].weather = data.currentConditions; //add the weather data to the event
+            }
           
             if(++counter ===events.length){ //if all the events have been processed
-              console.log(events); //print the events
+              console.log(events);
+              res.render('index', { events }); //send the events to the client
               console.log("All events processed"); //print all events processed
             }
 
@@ -158,62 +172,31 @@ function linkWeatherToEvents(events){
 }
 
 ////////////////////OAUTH FUNCTIONS////////////////////
-/**
- * Create an OAuth2 client with the given credentials, and then execute the
- * given callback function.
- * @param {Object} credentials The authorization client credentials.
- * @param {function} callback The callback to call with the authorized client.
- */
-function authorize(credentials, callback) {
-  const {client_secret, client_id, redirect_uris} = credentials.installed;
+function authorize(req, res, callback) {
   const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
-
-  // Check if we have previously stored a token.
-  fs.readFile(TOKEN_PATH, (err, token) => {
-    //if there is not a stored token, get the access token
-    if (err) return getAccessToken(oAuth2Client, callback); 
-    oAuth2Client.setCredentials(JSON.parse(token));
-    callback(oAuth2Client, linkWeatherToEvents);
-  });
+  if(req.cookies.cookieToken === undefined){
+    console.log("non esiste cookie");
+    return getAccessToken(res, oAuth2Client, callback); //get the access token
+  }else{
+    // yes, cookie was already present 
+    console.log('cookie exists', req.cookies.cookieToken);
+    oAuth2Client.setCredentials(JSON.parse(req.cookies.cookieToken));
+    callback(oAuth2Client, linkWeatherToEvents, res);
+  }
 }
 
-/**
- * Get and store new token after prompting for user authorization, and then
- * execute the given callback with the authorized OAuth2 client.
- * @param {google.auth.OAuth2} oAuth2Client The OAuth2 client to get token for.
- * @param {getEventsCallback} callback The callback for the authorized client.
- */
-function getAccessToken(oAuth2Client, callback) {
+// getAccessToken - get the access token
+function getAccessToken(res, oAuth2Client, callback) {
+
   const authUrl = oAuth2Client.generateAuthUrl({
     access_type: 'offline',
     scope: SCOPES,
   });
-  console.log('Authorize this app by visiting this url:', authUrl);
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-  rl.question('Enter the code from that page here: ', (code) => {
-    rl.close();
-    oAuth2Client.getToken(code, (err, token) => {
-      if (err) return console.error('Error retrieving access token', err);
-      oAuth2Client.setCredentials(token);
-      // Store the token to disk for later program executions
-      fs.writeFile(TOKEN_PATH, JSON.stringify(token), (err) => {
-        if (err) return console.error(err);
-        console.log('Token stored to', TOKEN_PATH);
-      });
-      callback(oAuth2Client);
-    });
-  });
+
+  res.send("<a href='" + authUrl + "'>Click here to authorize</a>");
 }
 
-/**
- * Lists the next events on the user's primary calendar.
- * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
- */
-
- module.exports = { 
+module.exports = { 
   SCOPES,
   getEvents,
 };
@@ -224,25 +207,62 @@ function getAccessToken(oAuth2Client, callback) {
 
 ////////////////////START MAIN////////////////////
 
-fs.readFile('credentials.json', (err, content) => {
-  if (err) return console.log('Error loading client secret file:', err);
-  // Authorize a client with credentials, then call the Google Calendar API.
-  authorize(JSON.parse(content), getEvents);
-});
-
 app.get('/', function(req, res){ //index page
-  res.send("Hello World!");
+  console.log(req.cookies);
+  
+    
+  if(req.query.code){ //if there is a code
+    let oAuth2Client = new google.auth.OAuth2(
+      client_id,
+      client_secret,
+      redirect_uris[0]
+    );
+    if(req.cookies.cookieToken !== undefined){ //if there is cookie
+      authorize(req, res, getEvents);
+    }else{
+      oAuth2Client.getToken(req.query.code, (err, token) => {
+        if (err) return console.error('Error retrieving access token', err);
+        oAuth2Client.setCredentials(token);
+        // no: set a new cookie
+        res.cookie('cookieToken',JSON.stringify(token), { maxAge: 900000, httpOnly: true });
+        console.log('cookieToken created successfully');
+        res.redirect('/');
+      });
+    }
+    
+
+  }else{
+    authorize(req, res, getEvents);
+  }
+
 });
 
-app.get('/login', function(req, res){ //login page
-  res.send("Login Page");
+
+app.get('/logout', function(req, res){ //index page
+  console.log(req.cookies);
+  res.clearCookie('cookieToken');
+  res.redirect('/');
+});
+
+app.get('/test', function(req, res){ //index page
+  res.render('index', { lacacca: 'cacca' });
+});
+
+app.get('/image', function(req, res){ //index page
+  
+  if(req.query.img)
+    res.sendFile( __dirname + '/views/icons/'+ req.query.img + '.png');
+});
+
+app.get('/weather', function(req, res){ //index page
+  getWeather(req.query.lat, req.query.lon, req.query.timestamp, (data) => {
+    res.send(data);
+  });
 });
 
 app.listen(80, function(){
   console.log("Server running on port 80");
 });
 
-
 ////////////////////END MAIN////////////////////
-
 

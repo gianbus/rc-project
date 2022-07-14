@@ -1,0 +1,86 @@
+html
+  head
+    style
+      include css/style.css
+
+.container
+  - var giorni = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab']
+  - var mesi = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre']
+  - var start_day = new Date()
+  .title #{mesi[start_day.getMonth()]} #{start_day.getFullYear()}
+  .days
+    .filler
+    .filler
+    .day.current #{giorni[start_day.getDay()]} #{start_day.getDate()} #{mesi[start_day.getMonth()]}
+    - var sabato = 3
+    - var domenica = 3
+    - for (i = 1; i < 7; i++)
+        - start_day.setDate(start_day.getDate() + 1)
+        - var classe
+
+        //verifico se il giorno è weekend
+        - if (start_day.getDay() == 0)
+            .day.weekend #{giorni[start_day.getDay()]} #{start_day.getDate()} #{mesi[start_day.getMonth()]}
+            - domenica = i+3
+        - else if(start_day.getDay() == 6)
+            .day.weekend #{giorni[start_day.getDay()]} #{start_day.getDate()} #{mesi[start_day.getMonth()]}
+            - sabato = i+3
+        - else
+            .day.workday #{giorni[start_day.getDay()]} #{start_day.getDate()} #{mesi[start_day.getMonth()]}
+        
+      
+  .content
+    each val, index in ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23' ]
+      .time(style='grid-row:'+[index+1])= val+":00"
+    .filler-col
+    - var n = 3;
+    while n < 10
+        if(n== domenica || n == sabato)
+          .col.weekendcol(style='grid-column:'+n++)
+        else
+          .col(style='grid-column:'+n++)
+    
+    - var n = 1
+    while n < 24
+      .row(style='grid-row:'+n++)
+    - var ora_inizio
+    - var ora_fine
+    - var giorno
+    - var differenza
+    
+
+    each event in events
+        - ora_inizio = (new Date (event.start.dateTime)).getHours()+1
+        - ora_fine = (new Date (event.end.dateTime)).getHours()+1
+        if(ora_inizio)
+          - differenza = ora_fine - ora_inizio
+        else
+          - differenza = 24
+          - ora_inizio = 1
+          
+        - var count = Object.keys(event.start).length
+        - var start = 0
+        - var tempo = 0
+        if(count == 1)
+          - start = event.start.date
+        else
+          - start = event.start.dateTime
+        if(Object.keys(event.weather).length > 0)
+          - tempo = 1
+        - giorno = 3+Math.abs((new Date()).getDate()-(new Date (start)).getDate()) //0-6 (domenica-sabato)
+        if(tempo)
+          a(href='/weather?lat='+event.weather.lat+'&lon='+event.weather.lon+'&timestamp='+event.weather.datetimeEpoch).event.calendar1(style='grid-column:'+ giorno + ';grid-row:'+ ora_inizio +'/span '+differenza+';') #{event.summary} #{event.start.dateTime} 
+            - var farenheitToCelsius =  (event.weather.temp - 32) * 5 / 9 
+            img(src="image?img="+event.weather.icon)
+            div #{farenheitToCelsius.toFixed(1)}°C
+        else 
+          .event.calendar1(style='grid-column:'+ giorno + ';grid-row:'+ ora_inizio +'/span '+differenza+';') #{event.summary} #{event.start.dateTime}
+
+    //.event.event1.calendar1 Event 1
+    //.event.event2.calendar2 Event 2
+    //.event.event3.calendar2 Event 3
+    //.event.event4.calendar1 Event 4
+
+
+    //.current-time
+      .circle
