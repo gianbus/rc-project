@@ -27,7 +27,7 @@ const SCOPES = ['https://www.googleapis.com/auth/calendar.readonly'];
 // created automatically when the authorization flow completes for the first time.
 const TOKEN_PATH = 'token.json';
 // Max days to add to the date
-const MAX_ADD_DAYS = 7;
+const MAX_ADD_DAYS = 6;
 
 ////////////////////FUNCTIONS////////////////////
 // getLatLong - get the latitude and longitude of the event location
