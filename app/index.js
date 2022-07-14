@@ -13,17 +13,6 @@ require('dotenv').config({ path: 'api_keys.env' })
 let visualWeatherKey = process.env.VISUAL_WEATHER_KEY;
 
 ////////////////////CONSTANTS////////////////////
-const credentials = {
-  installed: {
-    client_id: process.env.CLIENT_ID,
-    client_secret: process.env.CLIENT_SECRET,
-    redirect_uris: [process.env.REDIRECT_URIS]
-  }
-}
-const {client_secret, client_id, redirect_uris} = credentials.installed;
-const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
-
-
 // If modifying these scopes, delete token.json.
 const SCOPES = ['https://www.googleapis.com/auth/calendar.readonly'];
 // The file token.json stores the user's access and refresh tokens, and is
@@ -31,6 +20,11 @@ const SCOPES = ['https://www.googleapis.com/auth/calendar.readonly'];
 const TOKEN_PATH = 'token.json';
 // Max days to add to the date
 const MAX_ADD_DAYS = 7;
+
+// credentials - get the credentials from the token file
+const client_id = process.env.CLIENT_ID;
+const client_secret = process.env.CLIENT_SECRET;
+const redirect_uris = [process.env.REDIRECT_URIS];
 
 ////////////////////FUNCTIONS////////////////////
 // getLatLong - get the latitude and longitude of the event location
@@ -72,7 +66,7 @@ function toTimestamp(strDate){ //convert date to timestamp
 
 // getWeather - get the weather of the event location by using the lat and lon
 function getWeather(lat, lon, time, callback){
-  if(lat == null || lon == null) return callback(null); //if the lat or lon is undefined
+  if(lat == null|| lon == null) return callback(null); //if the lat or lon is undefined
   else{
     console.log("Getting weather for: "+lat+" "+lon+" "+time+"...");
     if(isMidNight(time)){ //if the event is at midnight add one second
@@ -108,9 +102,8 @@ function addDays(date, days) {
 }
 
 // getEvents - get the events from the calendar 
-function getEvents(response, callback) {
-  
-  const calendar = google.calendar({version: 'v3', oAuth2Client});
+function getEvents(auth, callback, response) {
+  const calendar = google.calendar({version: 'v3', auth});
   calendar.events.list({
     calendarId: 'primary',
     timeMin: (new Date()).toISOString(),
@@ -124,7 +117,7 @@ function getEvents(response, callback) {
 }
 
 //get the events and link the weather to them
-function linkWeatherToEvents(response, events){
+function linkWeatherToEvents(res, events){
   //console.log(events); //print all the events, for testing
   var counter = 0;
   if(events.length){ //if there are events
@@ -141,14 +134,13 @@ function linkWeatherToEvents(response, events){
         getLatLong(events[i].location, ([lat, lon]) => {
           
           getWeather(lat, lon, toTimestamp(start), (data) => {
-            if(data ==null){
+            if(data != null){ //if the weather is found
               let temp = Math.round(farhenheitToCelsius(parseInt(data.currentConditions.temp))*10)/10; //convert to celsius and round to 1 decimal place
               events[i].weather = data.currentConditions; //add the weather data to the event
             }
+          
             if(++counter ===events.length){ //if all the events have been processed
-              console.log(events); //print the events
-              response.send(events); //send the events to the client
-
+              res.send(events); //send the events to the client
               console.log("All events processed"); //print all events processed
             }
 
@@ -161,7 +153,6 @@ function linkWeatherToEvents(response, events){
 
         if(++counter === events.length){ //if all the events have been processed
           console.log(events); //print the events
-          response.send(events); //send the events to the client
           console.log("All events processed"); //print all events processed
         }
       }
@@ -170,35 +161,33 @@ function linkWeatherToEvents(response, events){
 
   }else{ //if there are no events
     console.log('No upcoming events found in next 7 days.'); //print no events found, for testing
-    response.send('No upcoming events found in next 7 days.'); //send no events to the client
   }
 
 }
 
 ////////////////////OAUTH FUNCTIONS////////////////////
-// getNewToken - get a new token from the google api
 function authorize(res, callback) {
+  const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
+
   // Check if we have previously stored a token.
   fs.readFile(TOKEN_PATH, (err, token) => {
     //if there is not a stored token, get the access token
-    if (err) return getAccessCode(res); 
+    if (err) return getAccessToken(res, oAuth2Client, callback);
     oAuth2Client.setCredentials(JSON.parse(token));
-    callback(res,linkWeatherToEvents);
+    callback(oAuth2Client, linkWeatherToEvents, res);
   });
 }
 
-// getAccessCode - get the access code from the user
-function getAccessCode(res){
+// getAccessToken - get the access token
+function getAccessToken(res, oAuth2Client, callback) {
   const authUrl = oAuth2Client.generateAuthUrl({
     access_type: 'offline',
     scope: SCOPES,
   });
-  res.send("<br><br><button onclick='window.location.href=\""+ authUrl +"\"'>Log in with Calendar</button>");
+
+  res.send("<a href='" + authUrl + "'>Click here to authorize</a>");
+
 }
-/**
- * Lists the next events on the user's primary calendar.
- * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
- */
 
  module.exports = { 
   SCOPES,
@@ -211,23 +200,32 @@ function getAccessCode(res){
 
 ////////////////////START MAIN////////////////////
 
-app.get('/login', function(req, res){ //login page
-    authorize(res, getEvents);
-});
-app.get('/oAuth2/getToken', function(req, res){ //login page
-  res.send("Login Page");
-});
-app.get('/', function(req, res){ //login page
-  oAuth2Client.getToken(req.query.code, (err, token) => {
-    if (err) return console.error('Error retrieving access token', err);
-    oAuth2Client.setCredentials(token);
-    // Store the token to disk for later program executions
-    fs.writeFile(TOKEN_PATH, JSON.stringify(token), (err) => {
-      if (err) return console.error(err);
-      console.log('Token stored to', TOKEN_PATH);
+app.get('/', function(req, res){ //index page
+  
+  if(req.query.code){ //if there is a code
+    let oAuth2Client = new google.auth.OAuth2(
+      client_id,
+      client_secret,
+      redirect_uris[0]
+    );
+    oAuth2Client.getToken(req.query.code, (err, token) => {
+      if (err) return console.error('Error retrieving access token', err);
+      oAuth2Client.setCredentials(token);
+      // Store the token to disk for later program executions
+      fs.writeFile(TOKEN_PATH, JSON.stringify(token), (err) => {
+        if (err) return console.error(err);
+        console.log('Token stored to', TOKEN_PATH);
+      });
+      getEvents(oAuth2Client, linkWeatherToEvents, res);
     });
-    getEvents(res,linkWeatherToEvents);
-  });
+
+  }else{
+    authorize(res, getEvents);
+  }
+
+});
+
+app.get('/app', function(req, res){ //login page
   
 });
 
@@ -235,7 +233,4 @@ app.listen(80, function(){
   console.log("Server running on port 80");
 });
 
-
 ////////////////////END MAIN////////////////////
-
-
