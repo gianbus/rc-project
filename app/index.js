@@ -21,6 +21,11 @@ const TOKEN_PATH = 'token.json';
 // Max days to add to the date
 const MAX_ADD_DAYS = 7;
 
+// credentials - get the credentials from the token file
+const client_id = process.env.CLIENT_ID;
+const client_secret = process.env.CLIENT_SECRET;
+const redirect_uris = [process.env.REDIRECT_URIS];
+
 ////////////////////FUNCTIONS////////////////////
 // getLatLong - get the latitude and longitude of the event location
 function getLatLong(location, callback){
@@ -45,7 +50,7 @@ function getLatLong(location, callback){
 
       }else{ //if the location is not splitted
         console.log("Location not found for the event with location: "+location); //print the location not found
-        return null;
+        return callback([null,null]); //callback null
       }
 
     }
@@ -61,18 +66,21 @@ function toTimestamp(strDate){ //convert date to timestamp
 
 // getWeather - get the weather of the event location by using the lat and lon
 function getWeather(lat, lon, time, callback){
-  console.log("Getting weather for: "+lat+" "+lon+" "+time+"...");
-  if(isMidNight(time)){ //if the event is at midnight add one second
-    time = time + 1;
-  }
-  let visualWeatherUrl = `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/${lat},${lon}/${time}?key=${visualWeatherKey}&include=current`;
-  req.get(visualWeatherUrl, (err, res, body) => {
-    if (err) return console.log(err);
-    else{
-      data = JSON.parse(body);
-      callback(data);
+  if(lat == null|| lon == null) return callback(null); //if the lat or lon is undefined
+  else{
+    console.log("Getting weather for: "+lat+" "+lon+" "+time+"...");
+    if(isMidNight(time)){ //if the event is at midnight add one second
+      time = time + 1;
     }
-  });
+    let visualWeatherUrl = `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/${lat},${lon}/${time}?key=${visualWeatherKey}&include=current`;
+    req.get(visualWeatherUrl, (err, res, body) => {
+      if (err) return console.log(err);
+      else{
+        data = JSON.parse(body);
+        callback(data);
+      }
+    });
+  }
 }
 
 // farhrenheitToCelsius - convert a temperature from fahrenheit to celsius
@@ -94,7 +102,7 @@ function addDays(date, days) {
 }
 
 // getEvents - get the events from the calendar 
-function getEvents(auth, callback) {
+function getEvents(auth, callback, response) {
   const calendar = google.calendar({version: 'v3', auth});
   calendar.events.list({
     calendarId: 'primary',
@@ -104,12 +112,12 @@ function getEvents(auth, callback) {
     orderBy: 'startTime',
   }, (err, res) => {
     if (err) return console.log('The API returned an error: ' + err);
-    callback(res.data.items);
+    callback(response, res.data.items);
   })
 }
 
 //get the events and link the weather to them
-function linkWeatherToEvents(events){
+function linkWeatherToEvents(res, events){
   //console.log(events); //print all the events, for testing
   var counter = 0;
   if(events.length){ //if there are events
@@ -126,13 +134,13 @@ function linkWeatherToEvents(events){
         getLatLong(events[i].location, ([lat, lon]) => {
           
           getWeather(lat, lon, toTimestamp(start), (data) => {
-
-            let temp = Math.round(farhenheitToCelsius(parseInt(data.currentConditions.temp))*10)/10; //convert to celsius and round to 1 decimal place
-            events[i].weather = data.currentConditions; //add the weather data to the event
-            console.log(counter); //print the counter
+            if(data != null){ //if the weather is found
+              let temp = Math.round(farhenheitToCelsius(parseInt(data.currentConditions.temp))*10)/10; //convert to celsius and round to 1 decimal place
+              events[i].weather = data.currentConditions; //add the weather data to the event
+            }
           
             if(++counter ===events.length){ //if all the events have been processed
-              console.log(events); //print the events
+              res.send(events); //send the events to the client
               console.log("All events processed"); //print all events processed
             }
 
@@ -158,60 +166,28 @@ function linkWeatherToEvents(events){
 }
 
 ////////////////////OAUTH FUNCTIONS////////////////////
-/**
- * Create an OAuth2 client with the given credentials, and then execute the
- * given callback function.
- * @param {Object} credentials The authorization client credentials.
- * @param {function} callback The callback to call with the authorized client.
- */
-function authorize(credentials, callback) {
-  const {client_secret, client_id, redirect_uris} = credentials.installed;
+function authorize(res, callback) {
   const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
 
   // Check if we have previously stored a token.
   fs.readFile(TOKEN_PATH, (err, token) => {
     //if there is not a stored token, get the access token
-    if (err) return getAccessToken(oAuth2Client, callback); 
+    if (err) return getAccessToken(res, oAuth2Client, callback);
     oAuth2Client.setCredentials(JSON.parse(token));
-    callback(oAuth2Client, linkWeatherToEvents);
+    callback(oAuth2Client, linkWeatherToEvents, res);
   });
 }
 
-/**
- * Get and store new token after prompting for user authorization, and then
- * execute the given callback with the authorized OAuth2 client.
- * @param {google.auth.OAuth2} oAuth2Client The OAuth2 client to get token for.
- * @param {getEventsCallback} callback The callback for the authorized client.
- */
-function getAccessToken(oAuth2Client, callback) {
+// getAccessToken - get the access token
+function getAccessToken(res, oAuth2Client, callback) {
   const authUrl = oAuth2Client.generateAuthUrl({
     access_type: 'offline',
     scope: SCOPES,
   });
-  console.log('Authorize this app by visiting this url:', authUrl);
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-  rl.question('Enter the code from that page here: ', (code) => {
-    rl.close();
-    oAuth2Client.getToken(code, (err, token) => {
-      if (err) return console.error('Error retrieving access token', err);
-      oAuth2Client.setCredentials(token);
-      // Store the token to disk for later program executions
-      fs.writeFile(TOKEN_PATH, JSON.stringify(token), (err) => {
-        if (err) return console.error(err);
-        console.log('Token stored to', TOKEN_PATH);
-      });
-      callback(oAuth2Client);
-    });
-  });
-}
 
-/**
- * Lists the next events on the user's primary calendar.
- * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
- */
+  res.send("<a href='" + authUrl + "'>Click here to authorize</a>");
+
+}
 
  module.exports = { 
   SCOPES,
@@ -224,25 +200,37 @@ function getAccessToken(oAuth2Client, callback) {
 
 ////////////////////START MAIN////////////////////
 
-fs.readFile('credentials.json', (err, content) => {
-  if (err) return console.log('Error loading client secret file:', err);
-  // Authorize a client with credentials, then call the Google Calendar API.
-  authorize(JSON.parse(content), getEvents);
-});
-
 app.get('/', function(req, res){ //index page
-  res.send("Hello World!");
+  
+  if(req.query.code){ //if there is a code
+    let oAuth2Client = new google.auth.OAuth2(
+      client_id,
+      client_secret,
+      redirect_uris[0]
+    );
+    oAuth2Client.getToken(req.query.code, (err, token) => {
+      if (err) return console.error('Error retrieving access token', err);
+      oAuth2Client.setCredentials(token);
+      // Store the token to disk for later program executions
+      fs.writeFile(TOKEN_PATH, JSON.stringify(token), (err) => {
+        if (err) return console.error(err);
+        console.log('Token stored to', TOKEN_PATH);
+      });
+      getEvents(oAuth2Client, linkWeatherToEvents, res);
+    });
+
+  }else{
+    authorize(res, getEvents);
+  }
+
 });
 
-app.get('/login', function(req, res){ //login page
-  res.send("Login Page");
+app.get('/app', function(req, res){ //login page
+  
 });
 
 app.listen(80, function(){
   console.log("Server running on port 80");
 });
 
-
 ////////////////////END MAIN////////////////////
-
-
