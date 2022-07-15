@@ -23,13 +23,18 @@ function apiWeatherEvents(req,res,category =""){
     var counter = 0;
     getLatLong(req.query.location, ([lat, lon]) => {
         getEvents(lat, lon, req.query.date,  (body) => {
+            console.log(body)
             if(body.results.length > 0){
-              body.results.map((event) => {
+              
+              body.results.map((event,i) => {
+                
                   getWeather(lat, lon, toTimestamp(event.start), (weather) => {
                     
-                    if(weather != null)
-                      event.weather = weather.currentConditions; //add the weather data to the event
-                    
+                    if(weather != null){
+                      let hour = (new Date(event.start)).getHours()
+                      console.log(hour)
+                      body.results[i].weather = weather.days[0].hours[hour]; //add the weather data to the event
+                    }
                     if(++counter === body.results.length){ //if all the events have been processed
                       if(req.query.maxtemperature && req.query.mintemperature){ //if the max and min temperature are requested
                         res.json((body.results).filter((n)=> n.weather.temp <= req.query.maxtemperature && n.weather.temp >= req.query.mintemperature)); 
@@ -38,6 +43,7 @@ function apiWeatherEvents(req,res,category =""){
                       }else if(req.query.maxtemperature){   
                         res.json((body.results).filter((n)=> n.weather.temp <= req.query.maxtemperature)); 
                       }else{
+
                         res.json(body.results);
                       }
                       console.log("All events processed"); //print all events processed
@@ -45,6 +51,8 @@ function apiWeatherEvents(req,res,category =""){
                     
                   })
               })
+            }else{
+              res.json({});
             }
         },category);
     });
@@ -105,20 +113,26 @@ function getLatLong(location, callback){
     });
 }
 
+// getWeather - get the weather of the event location by using the lat and lon
 function getWeather(lat, lon, time, callback){
-    if(lat === null || lon === null) return null;
+  if(lat == null|| lon == null) return callback(null); //if the lat or lon is undefined
+  else{
     console.log("Getting weather for: "+lat+" "+lon+" "+time+"...");
-    if(isMidNight(time)){ //if the event is at midnight
-      time = time + 1; //add one second 
-    }
-    let visualWeatherUrl = `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/${lat},${lon}/${time}?key=${visualWeatherKey}&include=current`;
-    return req.get(visualWeatherUrl, (err, res, body) => {
-      if (err) return console.log(err);
-      else{
-        data = JSON.parse(body);
-        return callback(data);
-      }
+    isMidNight(time,(mezzanotte) => {
+      if(mezzanotte) time = time + 1;
+      //let visualWeatherUrl = `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/${lat},${lon}/${time}?key=${visualWeatherKey}&unitGroup=metric&include=current`;
+      let visualWeatherUrl = `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/${lat},${lon}/${time}?key=${visualWeatherKey}&unitGroup=metric`;
+      //console.log(visualWeatherUrl);
+      req.get(visualWeatherUrl, (err, res, body) => {
+        if (err) return console.log(err);
+        else{
+          data = JSON.parse(body);
+          //console.log(data);
+          callback(data);
+        }
+      });
     });
+  }
 }
 
 function toTimestamp(strDate){ //convert date to timestamp
@@ -130,9 +144,9 @@ function farhenheitToCelsius(farhenheit){ //convert farhenheit to celsius
   return (farhenheit - 32) * 5/9; 
 }
 
-function isMidNight(timestamp){ //check if the timestamp is at midnight
+function isMidNight(timestamp, callback){
   let date = new Date(timestamp*1000);
-  return date.getHours() == 0 && date.getMinutes() == 0;
+  return callback(date.getHours() == 0 && date.getMinutes() == 0);
 }
 
 /////////////////////API CALLS////////////////////

@@ -75,7 +75,7 @@ function getWeather(lat, lon, time, callback){
       if(mezzanotte) time = time + 1;
       //let visualWeatherUrl = `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/${lat},${lon}/${time}?key=${visualWeatherKey}&unitGroup=metric&include=current`;
       let visualWeatherUrl = `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/${lat},${lon}/${time}?key=${visualWeatherKey}&unitGroup=metric`;
-      console.log(visualWeatherUrl);
+      //console.log(visualWeatherUrl);
       req.get(visualWeatherUrl, (err, res, body) => {
         if (err) return console.log(err);
         else{
@@ -136,9 +136,13 @@ function linkWeatherToEvents(res, events){
           getWeather(lat, lon, toTimestamp(start), (data) => {
             if(data != null){ //if the weather is found
               let temp = ((data.currentConditions.temp)*10)/10; // get the temperature in celsius (round to 1 decimal)
-              events[i].weather = data.days[0].hours[(new Date(start)).getHours()]; //add the weather data to the event
+              let hour = event.start.date?0:(new Date(start)).getHours()
+
+              
+              events[i].weather = data.days[0].hours[hour]; //add the weather data to the event
               events[i].weather.lat = lat;
               events[i].weather.lon = lon;
+              
             }
           
             if(++counter ===events.length){ //if all the events have been processed
@@ -253,7 +257,7 @@ app.get('/image', function(req, res){ //index page
 
 app.get('/weather', function(req, res){ //index page
   getWeather(req.query.lat, req.query.lon, parseInt(req.query.time), (data) => {
-    res.json(data);
+    res.json(data.days[0].hours[(new Date(parseInt(req.query.time*1000))).getHours()]);
   });
 });
 
