@@ -71,32 +71,27 @@ function getWeather(lat, lon, time, callback){
   if(lat == null|| lon == null) return callback(null); //if the lat or lon is undefined
   else{
     console.log("Getting weather for: "+lat+" "+lon+" "+time+"...");
-    if(isMidNight(time)){ //if the event is at midnight add one second
-      time = time + 1;
-    }
-    let visualWeatherUrl = `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/${lat},${lon}/${time}?key=${visualWeatherKey}&include=current`;
-    req.get(visualWeatherUrl, (err, res, body) => {
-      if (err) return console.log(err);
-      else{
-        data = JSON.parse(body);
-        console.log(lon);
-        data.currentConditions.lon = lon;
-        data.currentConditions.lat = lat;
-        callback(data);
-      }
+    isMidNight(time,(mezzanotte) => {
+      if(mezzanotte) time = time + 1;
+      //let visualWeatherUrl = `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/${lat},${lon}/${time}?key=${visualWeatherKey}&unitGroup=metric&include=current`;
+      let visualWeatherUrl = `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/${lat},${lon}/${time}?key=${visualWeatherKey}&unitGroup=metric`;
+      console.log(visualWeatherUrl);
+      req.get(visualWeatherUrl, (err, res, body) => {
+        if (err) return console.log(err);
+        else{
+          data = JSON.parse(body);
+          //console.log(data);
+          callback(data);
+        }
+      });
     });
   }
 }
 
-// farhrenheitToCelsius - convert a temperature from fahrenheit to celsius
-function farhenheitToCelsius(farhenheit){
-  return (farhenheit - 32) * 5/9; 
-}
-
 // isMidNight - check if the time is midnight
-function isMidNight(timestamp){
+function isMidNight(timestamp, callback){
   let date = new Date(timestamp*1000);
-  return date.getHours() == 0 && date.getMinutes() == 0;
+  return callback(date.getHours() == 0 && date.getMinutes() == 0);
 }
 
 // addDays - add days to a date and return the new date
@@ -140,8 +135,10 @@ function linkWeatherToEvents(res, events){
           
           getWeather(lat, lon, toTimestamp(start), (data) => {
             if(data != null){ //if the weather is found
-              let temp = Math.round(farhenheitToCelsius(parseInt(data.currentConditions.temp))*10)/10; //convert to celsius and round to 1 decimal place
-              events[i].weather = data.currentConditions; //add the weather data to the event
+              let temp = ((data.currentConditions.temp)*10)/10; // get the temperature in celsius (round to 1 decimal)
+              events[i].weather = data.days[0].hours[(new Date(start)).getHours()]; //add the weather data to the event
+              events[i].weather.lat = lat;
+              events[i].weather.lon = lon;
             }
           
             if(++counter ===events.length){ //if all the events have been processed
@@ -175,11 +172,11 @@ function linkWeatherToEvents(res, events){
 function authorize(req, res, callback) {
   const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
   if(req.cookies.cookieToken === undefined){
-    console.log("non esiste cookie");
+    //console.log("non esiste cookie");
     return getAccessToken(res, oAuth2Client, callback); //get the access token
   }else{
     // yes, cookie was already present 
-    console.log('cookie exists', req.cookies.cookieToken);
+    //console.log('cookie exists', req.cookies.cookieToken);
     oAuth2Client.setCredentials(JSON.parse(req.cookies.cookieToken));
     callback(oAuth2Client, linkWeatherToEvents, res);
   }
@@ -225,7 +222,7 @@ app.get('/', function(req, res){ //index page
         oAuth2Client.setCredentials(token);
         // no: set a new cookie
         res.cookie('cookieToken',JSON.stringify(token), { maxAge: 900000, httpOnly: true });
-        console.log('cookieToken created successfully');
+        //console.log('cookieToken created successfully');
         res.redirect('/');
       });
     }
@@ -239,7 +236,7 @@ app.get('/', function(req, res){ //index page
 
 
 app.get('/logout', function(req, res){ //index page
-  console.log(req.cookies);
+  //console.log(req.cookies);
   res.clearCookie('cookieToken');
   res.redirect('/');
 });
@@ -255,10 +252,11 @@ app.get('/image', function(req, res){ //index page
 });
 
 app.get('/weather', function(req, res){ //index page
-  getWeather(req.query.lat, req.query.lon, req.query.timestamp, (data) => {
-    res.send(data);
+  getWeather(req.query.lat, req.query.lon, parseInt(req.query.time), (data) => {
+    res.json(data);
   });
 });
+
 
 app.listen(80, function(){
   console.log("Server running on port 80");
