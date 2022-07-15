@@ -1,0 +1,17 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: underdefresco-ingress
+  namespace: default
+spec:
+  rules:
+  - host: localhost
+    http:
+      paths:
+      - path: /api/
+        pathType: Prefix
+        backend:
+          service:
+            name: underdefresco-api-service
+            port:
+              number: 80

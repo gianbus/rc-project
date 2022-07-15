@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: Deployment
+metadata:
+  name: underdefresco-api
+  labels:
+    app: underdefresco-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: underdefresco-api
+  template:
+    metadata:
+      labels:
+        app: underdefresco-api
+    spec:
+      containers:
+      - name: nodejs-api
+        image: valeriobosco/underdefresco
+        ports:
+        - containerPort: 80
+          protocol: TCP
+        env:
+        - name: CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: mysecret
+              key: CLIENT_ID
+        - name: CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: mysecret
+              key: CLIENT_SECRET
+        - name: REDIRECT_URIS
+          valueFrom:
+            secretKeyRef:
+              name: mysecret
+              key: REDIRECT_URIS
+        - name: VISUAL_WEATHER_KEY
+          valueFrom:
+            secretKeyRef:
+              name: mysecret
+              key: VISUAL_WEATHER_KEY 
+        - name: PREDICT_KEY
+          valueFrom:
+            secretKeyRef:
+              name: mysecret
+              key: PREDICT_KEY

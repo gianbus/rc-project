@@ -2,3 +2,4 @@ api_keys.env
 credentials.json
 token.json
 app/node_modules/*
+underdefresco_key.yaml

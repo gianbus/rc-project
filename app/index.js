@@ -13,19 +13,17 @@ app.set('view engine', 'pug');
 app.set('views', './views');
 
 ////////////////////API KEYS////////////////////
-require('dotenv').config({ path: 'api_keys.env' })
-let visualWeatherKey = process.env.VISUAL_WEATHER_KEY;
-// credentials - get the credentials from the token file
+//require('dotenv').config({ path: 'api_keys.env' })
+const visualWeatherKey = process.env.VISUAL_WEATHER_KEY;
+// credentials - get the credentials from the environment variables
 const client_id = process.env.CLIENT_ID;
 const client_secret = process.env.CLIENT_SECRET;
 const redirect_uris = [process.env.REDIRECT_URIS];
-
+const predict_key = process.env.PREDICT_KEY;
 ////////////////////CONSTANTS////////////////////
 // If modifying these scopes, delete token.json.
 const SCOPES = ['https://www.googleapis.com/auth/calendar.readonly'];
-// The file token.json stores the user's access and refresh tokens, and is
-// created automatically when the authorization flow completes for the first time.
-const TOKEN_PATH = 'token.json';
+
 // Max days to add to the date
 const MAX_ADD_DAYS = 6;
 
@@ -36,25 +34,26 @@ function getLatLong(location, callback){
   let location_utf8 = location.toString("utf8"); //convert to utf8
   
   req.get(`http://nominatim.openstreetmap.org/search?format=json&q=${location_utf8}`, (err, res, body) => { //get the lat and lon of the location
-    if (err) return console.log(err); //if there is an error
-    data = JSON.parse(body); //parse the json
+    if (err){
+      return console.log(err); //if there is an error
+    }else{
+      data = JSON.parse(body); //parse the json
+      if(data.length > 0){ //location is found
+        let lat = JSON.parse(body)[0].lat; //get the lat
+        let lon = JSON.parse(body)[0].lon; //get the lon
+        return callback([lat, lon]); //callback the lat and lon
 
-    if(data.length > 0){ //location is found
-      let lat = JSON.parse(body)[0].lat; //get the lat
-      let lon = JSON.parse(body)[0].lon; //get the lon
-      return callback([lat, lon]); //callback the lat and lon
+      }else{ //location is not found
+        let splittato = location_utf8.split(/,/g); //split the location
+        if(splittato.length > 3){ //if the location is splitted
+          splittato.shift(); //remove the first element
+          return getLatLong(splittato.toString("utf8"), callback); //get the lat and lon of the second part of the location
 
-    }else{ //location is not found
-      let splittato = location_utf8.split(/,/g); //split the location
-      if(splittato.length > 3){ //if the location is splitted
-        splittato.shift(); //remove the first element
-        return getLatLong(splittato.toString("utf8"), callback); //get the lat and lon of the second part of the location
-
-      }else{ //if the location is not splitted
-        console.log("Location not found for the event with location: "+location); //print the location not found
-        return callback([null,null]); //callback null
+        }else{ //if the location is not splitted
+          console.log("Location not found for the event with location: "+location); //print the location not found
+          return callback([null,null]); //callback null
+        }
       }
-
     }
 
   });
@@ -157,9 +156,10 @@ function linkWeatherToEvents(res, events){
 
       }else{ //if there is no location
         console.log(`${i} - ${start} - ${event.summary} - No location`); //print the event without location
-
+        
         if(++counter === events.length){ //if all the events have been processed
           console.log(events); //print the events
+          res.render('index', { events }); //send the events to the client
           console.log("All events processed"); //print all events processed
         }
       }
@@ -167,9 +167,70 @@ function linkWeatherToEvents(res, events){
     }); //for each event
 
   }else{ //if there are no events
+    let events = []
+    res.render('index', { events });
     console.log('No upcoming events found in next 7 days.'); //print no events found, for testing
   }
 
+}
+////////////////////API FUNCTIONS////////////////////
+function getPublicEvents(lat, lon, date, callback,category = "") {
+  req.get(
+    {
+      url:''+`https://api.predicthq.com/v1/events/?end.lte=${date}&within=40km@${lat},${lon}&start.gte=${date}${category}`+'',
+      headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer '+ predict_key
+      }
+    }, (err, res, body) => { //get the lat and lon of the location
+    
+    if (err){
+      return console.log(err); //if there is an error
+
+    }else{
+      //console.log(JSON.parse(body)); //parse the json
+      callback (JSON.parse(body))
+
+  }
+
+})
+}
+
+function apiWeatherEvents(req,res,category =""){
+  if(req.query.location === undefined){
+    res.json({});
+  }else{
+    var counter = 0;
+    getLatLong(req.query.location, ([lat, lon]) => {
+        getPublicEvents(lat, lon, req.query.date,  (body) => {
+            if(body.results.length > 0){
+              body.results.map((event,i) => {
+                  getWeather(lat, lon, toTimestamp(event.start), (weather) => {
+                    if(weather != null){
+                      let hour = (new Date(event.start)).getHours();
+                      body.results[i].weather = weather.days[0].hours[hour]; //add the weather data to the event
+                    }
+                    if(++counter === body.results.length){ //if all the events have been processed
+                      if(req.query.maxtemperature && req.query.mintemperature){ //if the max and min temperature are requested
+                        res.json((body.results).filter((n)=> n.weather.temp <= req.query.maxtemperature && n.weather.temp >= req.query.mintemperature)); 
+                      }else if(req.query.mintemperature){
+                        res.json((body.results).filter((n)=> n.weather.temp >= req.query.mintemperature)); 
+                      }else if(req.query.maxtemperature){   
+                        res.json((body.results).filter((n)=> n.weather.temp <= req.query.maxtemperature)); 
+                      }else{
+                        res.json(body.results);
+                      }
+                      console.log("All events processed"); //print all events processed
+                    }
+                    
+                  })
+              })
+            }else{
+              res.json({});
+            }
+        },category);
+    });
+  }
 }
 
 ////////////////////OAUTH FUNCTIONS////////////////////
@@ -259,6 +320,21 @@ app.get('/weather', function(req, res){ //index page
   getWeather(req.query.lat, req.query.lon, parseInt(req.query.time), (data) => {
     res.json(data.days[0].hours[(new Date(parseInt(req.query.time*1000))).getHours()]);
   });
+});
+
+
+////////////////////API CALLS////////////////////
+app.get('/api/v1/weatherEvents', function(req, res) {
+  apiWeatherEvents(req,res);
+});
+app.get('/api/v1/weatherEvents/concerts', function(req, res) {
+  apiWeatherEvents(req,res,"&category=concerts");
+});
+app.get('/api/v1/weatherEvents/sports', function(req, res) {
+  apiWeatherEvents(req,res,"&category=sports");
+});
+app.get('/api/v1/weatherEvents/community', function(req, res) {
+  apiWeatherEvents(req,res,"&category=community");
 });
 
 
