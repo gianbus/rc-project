@@ -40,7 +40,7 @@ spec:
           valueFrom:
             secretKeyRef:
               name: mysecret
-              key: VISUAL_WEATHER_KEY 
+              key: VISUAL_WEATHER_KEY
         - name: PREDICT_KEY
           valueFrom:
             secretKeyRef:
@@ -89,7 +89,7 @@ spec:
           valueFrom:
             secretKeyRef:
               name: mysecret
-              key: VISUAL_WEATHER_KEY 
+              key: VISUAL_WEATHER_KEY
         - name: PREDICT_KEY
           valueFrom:
             secretKeyRef:
@@ -166,11 +166,14 @@ spec:
     istio: ingressgateway # use Istio default gateway implementation
   servers:
   - port:
-      number: 80
-      name: http
-      protocol: HTTP
+      number: 443
+      name: https
+      protocol: HTTPS
+    tls:
+      mode: SIMPLE
+      credentialName: frescocredentials # must be the same as secret
     hosts:
-    - "c8bf-151-24-228-47.eu.ngrok.io"
+    - "*"
 ---
 apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
@@ -178,7 +181,7 @@ metadata:
   name: underdefresco-oauth-vs
 spec:
   hosts:
-  - "c8bf-151-24-228-47.eu.ngrok.io"
+  - "34.65.90.250.nip.io"
   gateways:
   - underdefresco-gateway
   http:
@@ -198,7 +201,7 @@ metadata:
   name: underdefresco-api-vs
 spec:
   hosts:
-  - "c8bf-151-24-228-47.eu.ngrok.io"
+  - "34.65.90.250.nip.io"
   gateways:
   - underdefresco-gateway
   http:
@@ -209,5 +212,5 @@ spec:
     - destination:
         port:
           number: 3001
-        host: underdefresco-api-service     
-        
+        host: underdefresco-api-service
+
