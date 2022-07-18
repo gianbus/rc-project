@@ -197,7 +197,7 @@ app.get('/logout', function(req, res){ //index page
 });
 
 app.get('/weather', function(req, res){ //index page
-  request.get(`http://weatherservice?lat=${req.query.lat}&lon=${req.query.lon}&time=${req.query.time}`, (err_weather, res_weather, body_weather) => {
+  request.get(`http://weatherservice.default.svc.cluster.local:80?lat=${req.query.lat}&lon=${req.query.lon}&time=${req.query.time}`, (err_weather, res_weather, body_weather) => {
     let data = (JSON.parse(body_weather)).weather;
     res.json(data.days[0].hours[(new Date(parseInt(req.query.time*1000))).getHours()]);
   });
