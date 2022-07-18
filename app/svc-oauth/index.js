@@ -187,7 +187,7 @@ app.get('/', function(req, res){ //index page
 
 app.get('/test', function(req, res){ //index page
   //console.log(req.cookies);
-  res.send("ciaociao");
+  res.send("ciaociao1");
 });
 
 app.get('/logout', function(req, res){ //index page
