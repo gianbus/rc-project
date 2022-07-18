@@ -97,6 +97,7 @@ jobs:
         run: ls
         working-directory: ./kubernetes
 
+
       - name: Apply secret to the  cluster 
         run: kubectl apply -f underdefresco_key.yaml
         working-directory: ./kubernetes
