@@ -2,8 +2,6 @@
 
 ![example workflow](https://github.com/Zeplicious/Pho2Song/actions/workflows/node.js.yml/badge.svg)
 ![example workflow](https://github.com/Zeplicious/Pho2Song/actions/workflows/dockerAPI.yml/badge.svg)
-![example workflow](https://github.com/Zeplicious/Pho2Song/actions/workflows/dockerDB.yml/badge.svg)
-[![CodeFactor](https://www.codefactor.io/repository/github/zeplicious/pho2song/badge/main)](https://www.codefactor.io/repository/github/zeplicious/pho2song/overview/main)
 
 
 ## Scopo del progetto
@@ -80,148 +78,93 @@ e posizionarsi nella root directory del git.
 
 
 
-### Configurare l'ambiente kubernetes/istio
+### Configurare l'ambiente kubernetes/istio su VM
+
+Scarichiamo la lista aggiornata dei pacchetti e delle nuove versioni disponibili nei repository
 ```
 sudo apt update
-
-#installazione docker
+```
+Installiamo docker
+```
 sudo apt install docker.io
+```
 
-#installazione k3s
+Installiamo k3s disattivando traefik
+```
 curl -sfL https://get.k3s.io | sh -s - --no-deploy=traefik --write-kubeconfig-mode 644
+```
 
-#installazione istio
+Installiamo istio e settiamo le variabili d'ambiente necessarie per l'utilizzo di istioctl
+```
 curl -L https://istio.io/downloadIstio | ISTIO_VERSION=1.14.1 TARGET_ARCH=x86_64 sh -
 cd istio-1.14.1
 export PATH=$PWD/bin:$PATH
 export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 istioctl install --set profile=demo -y
+```
 
-sleep 10
-
+Abilitiamo l'istio-injection degli envoy proxy nei pod appartenenti al namespace di default
+```
 kubectl label namespace default istio-injection=enabled
+```
+Adesso risulta configurato correttamente l'ambiente k3s e istio.
 
-#apply bookinfo
-#kubectl apply -f samples/bookinfo/platform/kube/bookinfo.yaml
-sleep 15
+### Creare il secret contenente le API keys
+Prima di applicare il deployment dell'applicazione __Project-frsco__ vero e proprio, viene configurato il secret contenente tutte le API keys necessarie al funzionamento dell'applicazione e i certificati SSL.
+
+1. Creiamo il file underdefresco_key.yaml con la seguente struttura
+```
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysecret
+type: Opaque
+stringData:
+  CLIENT_ID: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+  CLIENT_SECRET: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+  REDIRECT_URIS: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+  VISUAL_WEATHER_KEY: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+  PREDICT_KEY: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+```
+2. Eseguiamo l'apply del secret con il comando:
+```
+kubectl apply -f underdefresco_key.yaml
+```
+Adesso risulta correttamente creato il secret contenente le api keys.
+
+### Creare il certificato SSL e il secret associato
+Al fine di garantire la connessione https creiamo un certificato self-signed.
+1. Creiamo le chiavi relative alla Certification Authority
+```
+openssl req -x509 -sha256 -nodes -days 365 -newkey rsa:2048 -subj '/O=CA Inc./CN=CA.com' -keyout CA.key -out CA.crt
+```
+2. Creiamo successivamente il certificato vero e proprio
+```
+openssl req -out {example.com}.csr -newkey rsa:2048 -nodes -keyout {example.com}.key -subj "/CN={your organisation name}/O={your organisation name}"
+openssl x509 -req -sha256 -days 365 -CA CA.crt -CAkey CA.key -set_serial 0 -in {example.com}.csr -out {example.com}.crt
+```
+3. Creiamo ed applichiamo quindi il secret frescocredentials al namespace istio-system
+```
+kubectl create -n istio-system secret tls frescocredentials --key={example.com}.key --cert={example.com}.crt
 ```
 
-
-### Api/App stand alone
-
-- Creare un file `.env` da inserire nella directory `/app` strutturato come segue:
-
+### Deployment applicazione
+Dopo aver opportunamente sostituito le voci {ip_VM} (nel file rc-project/kubernetes/deployment/underdefresco.yaml) con l'ip della vostra Virtual Machine, e quindi recatici nella stessa directory, per effettuare l'apply di tutti i Deployments, Services, VirtualServices e Gateways che compongono l'applicazione basta utilizzare il comando:
+```
+kubectl apply -f underdefresco.yml
 ```
 
-
-Struttura "api_keys.env":
-
-VISUAL_WEATHER_KEY=XXXXXXXXXXXXXXXXXXXXXXXX
-
-CLIENT_ID=XXXXXXXXXXXXXXXXXXXXXXXX
-
-CLIENT_SECRET=XXXXXXXXXXXXXXXXXXXXXXXX
-
-REDIRECT_URIS=XXXXXXXXXXXXXXXXXXXXXXXX
-
+### Analisi del traffico e installazione addons Jaeger e Kiali
+Ai fini dell'analisi del traffico attraverso istio è consigliata l'installazione di ulteriori addons, in particolare Jaeger e Kiali.
+L'installazione di questi ultimi è possibile attraverso il seguenti comando:
 ```
-
-- Spostarsi nella directory di interesse ed installare le dipendenze necessarie per il funzionamento inserendo in console:
-
+kubectl apply -f samples/addons
+kubectl rollout status deployment/kiali -n istio-system
 ```
-cd /app
-npm install
+Successivamente per esporre i servizi in rete sono necessarie le applicazioni dei file kiali.yaml e jaeger.yaml contenuti nella cartella rc-poject/kubernetes/deployment/ e dopo aver sostituito opportunamente le voci {ip_VM} con l'IP esterno della vostra Macchina Virtuale.
+Questo può essere effettuato, dopo essersi recati nella directory sopracitata, con i comandi:
 ```
-
-- Per avviare il server è sufficente scrivere in console:
-
+kubectl apply -f kiali.yml
+kubectl apply -f tracing.yml
 ```
-npm start
-```
-- Per utilizzare l'app visitare `http://localhost:8080/`
-
-**_NOTA:_** Per api il processo è analogo. (visitare l'endpoint `http://localhost:8080/api-docs`)
-
-### CouchDB
-
-**_NOTA:_** Se si ha installato CouchDB è possibile saltare questa sezione. E' importante inserire le credenziali del proprio database nel file `.env` nei campi `DB_USER` e `DB_PASSWORD` e mettere il database in ascolto sulla porta 5984 in localhost.
-
-
-- Completare il file /docker/couchdb/test.Dockerfile inserendo le credenziali del database inserite nel file `.env`.
-```
-ENV COUCHDB_USER=<DB_USER>
-ENV COUCHDB_PASSWORD=<DB_PASSWORD>
-```
-
-- Successivamente è sufficente inserire in console i seguenti comandi:
-
-```
-docker build -t pho2song:couchdb /docker/couchdb/test.Dockerfile
-docker run -p 5984:5984 pho2song:couchdb
-```
-
-### Docker environment
-
-- Gestire il file `.env` come spiegato nella sezione [api/app](#### Api/App stand alone).
-- Completare il file `/docker/couchdb/test.Dockerfile` come spiegato nella sezione [couchdb](#### CouchDB).
-- Generare un certificato SSL.
-- Inserire in /docker/nginx/ssl `cert.pem` e `cert-key.pem`.
-- Per testare environment docker è sufficente inserire in console:
-
-```
-docker-compose up
-```
-- Per utilizzare l'app visitare `https://localhost:8080/`
-- 
-#### Docker environment (developers)
-
-- Per testare environment docker è sufficente inserire in console:
-
-```
-docker-compose -f "development.docker-compose.yml" up
-```
-- Per utilizzare l'app visitare `https://localhost:8080/`
-
----
-
-## Istruzioni per il test
-
-### Applicazione
-
-Per testare l'applicazione:
-
-partendo dalla directory root `Pho2Song` spostarsi nella cartella `app`
-
-```
-cd app
-```
-
-e digitare in console il comando:
-
-```
-npm test
-```
-
-Viene utilizzato il modulo `jest` per eseguire i test che hanno un tempo di esecuzione variabile. Lasciar andare il programma finchè non sono visibili i risultati dei test
-
-### API
-
-Per testare le chiamate API:
-
-partendo dalla directory root `Pho2Song` spostarsi nella cartella `api`
-
-```
-cd api
-```
-
-e digitare in console il comando:
-
-```
-npm start
-```
-
-Anche in questo caso viene utilizzato il modulo `jest` per eseguire i test che hanno un tempo di esecuzione variabile. Lasciar andare il programma finchè non sono visibili i risultati dei test
-
-
-
 
