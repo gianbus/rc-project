@@ -39,8 +39,6 @@ jobs:
           tags: ${{ steps.meta_weather.outputs.tags }}
           labels: ${{ steps.meta_weather.outputs.labels }}
 
-
-
       - name: Extract metadata (tags, labels) for Docker
         id: meta_oauth
         uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
@@ -54,7 +52,6 @@ jobs:
           push: true
           tags: ${{ steps.meta_oauth.outputs.tags }}
           labels: ${{ steps.meta_oauth.outputs.labels }}
-      
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta_api
