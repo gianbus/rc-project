@@ -70,7 +70,7 @@ function linkWeatherToEvents(res, events){
 
         console.log(i + ` - ${start} - ${event.summary}`); //print the event Summary
 
-        request.get(`latlonservice.default.svc.cluster.local:80?location=${events[i].location}`,  (err_coord, res_coord, body_coord)=> {
+        request.get(`http://latlonservice.default.svc.cluster.local:80?location=${events[i].location}`,  (err_coord, res_coord, body_coord)=> {
           let lat = (JSON.parse(body_coord)).lat;
           let lon = (JSON.parse(body_coord)).lon;
 
