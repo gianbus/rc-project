@@ -98,6 +98,6 @@ jobs:
 
       - name: Apply modifications to the kubernetes config
         run: kubectl apply -f underdefresco.yaml
-        working-directory: ./kubernetes/
+        working-directory: ./kubernetes/ 
         
 
