@@ -99,7 +99,7 @@ jobs:
 
 
       - name: Apply secret to the  cluster 
-        run: kubectl apply -f ../../../..//underdefresco_key.yaml
+        run: kubectl apply -f ../../../../underdefresco_key.yaml
         working-directory: .
 
       - name: Apply modifications to the kubernetes config
