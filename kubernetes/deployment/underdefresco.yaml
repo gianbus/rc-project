@@ -233,7 +233,7 @@ metadata:
   name: underdefresco-oauth-vs
 spec:
   hosts:
-  - "34.65.90.250.nip.io"
+  - "34.65.247.228.nip.io"
   gateways:
   - underdefresco-gateway
   http:
@@ -253,7 +253,7 @@ metadata:
   name: underdefresco-api-vs
 spec:
   hosts:
-  - "34.65.90.250.nip.io"
+  - "34.65.247.228.nip.io"
   gateways:
   - underdefresco-gateway
   http:
