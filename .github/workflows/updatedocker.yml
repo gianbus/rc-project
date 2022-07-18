@@ -93,12 +93,12 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Apply secret to the  cluster 
-        run: kubectl delete -f ../../../../underdefresco_key.yaml
-        working-directory: .
-
-      - name: Apply secret to the  cluster 
         run: kubectl apply -f ../../../../underdefresco_key.yaml
         working-directory: .
+
+      - name: Delete modifications to the kubernetes config
+        run: kubectl delete -f underdefresco.yaml
+        working-directory: ./kubernetes/deployment
 
       - name: Apply modifications to the kubernetes config
         run: kubectl apply -f underdefresco.yaml
