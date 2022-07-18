@@ -17,7 +17,7 @@ spec:
       terminationGracePeriodSeconds: 7200
       containers:
       - name: oauth
-        image: underdefresco/oauth:k3s-with-services
+        image: underdefresco/oauth:main
         imagePullPolicy: "Always"
         ports:
         - containerPort: 80
@@ -63,7 +63,7 @@ spec:
       terminationGracePeriodSeconds: 7200
       containers:
       - name: api
-        image: underdefresco/api:k3s-with-services
+        image: underdefresco/api:main
         imagePullPolicy: "Always"
         ports:
         - containerPort: 80
@@ -94,7 +94,7 @@ spec:
       terminationGracePeriodSeconds: 7200
       containers:
       - name: getlatlon
-        image: underdefresco/getlatlon:k3s-with-services
+        image: underdefresco/getlatlon:main
         imagePullPolicy: "Always"
         ports:
         - containerPort: 80
@@ -119,7 +119,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
       - name: getweather
-        image: underdefresco/getweather:k3s-with-services
+        image: underdefresco/getweather:main
         imagePullPolicy: "Always"
         ports:
         - containerPort: 80
