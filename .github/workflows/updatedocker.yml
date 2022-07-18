@@ -9,7 +9,6 @@ on:
   push:
     branches:    
         - 'main'
-        - 'k3s-with-services' 
 
 jobs:
   push_to_registry:
