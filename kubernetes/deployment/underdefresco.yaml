@@ -14,9 +14,12 @@ spec:
       labels:
         app: underdefresco-oauth
     spec:
+      terminationGracePeriodSeconds: 30
       containers:
       - name: oauth
         image: underdefresco/oauth:k3s-with-services
+        imagePullPolicy: "Always"
+
         ports:
         - containerPort: 80
           protocol: TCP
@@ -58,9 +61,12 @@ spec:
       labels:
         app: underdefresco-api
     spec:
+      terminationGracePeriodSeconds: 30
       containers:
       - name: api
         image: underdefresco/api:k3s-with-services
+        imagePullPolicy: "Always"
+
         ports:
         - containerPort: 80
           protocol: TCP
@@ -87,9 +93,11 @@ spec:
       labels:
         app: underdefresco-getlatlon
     spec:
+      terminationGracePeriodSeconds: 30
       containers:
       - name: getlatlon
         image: underdefresco/getlatlon:k3s-with-services
+        imagePullPolicy: "Always"
         ports:
         - containerPort: 80
           protocol: TCP
@@ -110,9 +118,11 @@ spec:
       labels:
         app: underdefresco-getweather
     spec:
+      terminationGracePeriodSeconds: 30
       containers:
       - name: getweather
         image: underdefresco/getweather:k3s-with-services
+        imagePullPolicy: "Always"
         ports:
         - containerPort: 80
           protocol: TCP
