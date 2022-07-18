@@ -62,7 +62,6 @@ function linkWeatherToEvents(res, events){
   var counter = 0;
   if(events.length){ //if there are events
     console.log('Upcoming events:');
-    res.send("ciao");
     events.forEach((event, i) => { //for each event
       const start = event.start.dateTime || event.start.date;
       events[i].weather = {}; //add empty weather data to the event
@@ -186,6 +185,10 @@ app.get('/', function(req, res){ //index page
 
 });
 
+app.get('/test', function(req, res){ //index page
+  //console.log(req.cookies);
+  res.send("ciaociao");
+});
 
 app.get('/logout', function(req, res){ //index page
   //console.log(req.cookies);
