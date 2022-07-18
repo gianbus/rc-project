@@ -1,9 +1,6 @@
 ////////////////////REQUIREMENTS////////////////////
-const fs = require('fs');
-const readline = require('readline');
 const {google} = require('googleapis');
 const request = require('request');
-const {Console} = require('console');
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const { container } = require('googleapis/build/src/apis/container');
