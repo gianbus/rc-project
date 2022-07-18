@@ -36,8 +36,8 @@ jobs:
         with:
           context: ./app/svc-oauth
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta_weather.outputs.tags }}
+          labels: ${{ steps.meta_weather.outputs.labels }}
 
 
 
@@ -52,8 +52,8 @@ jobs:
         with:
           context: ./app/svc-api
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta_oauth.outputs.tags }}
+          labels: ${{ steps.meta_oauth.outputs.labels }}
       
 
       - name: Extract metadata (tags, labels) for Docker
@@ -67,8 +67,8 @@ jobs:
         with:
           context: ./app/micro-svc-getWeather
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta_api.outputs.tags }}
+          labels: ${{ steps.meta_api.outputs.labels }}
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta_latlon
@@ -81,8 +81,8 @@ jobs:
         with:
           context: ./app/micro-svc-getLatLon
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta_latlon.outputs.tags }}
+          labels: ${{ steps.meta_latlon.outputs.labels }}
 
   pull_from_repo:
     name: Pull repo from GitHub
