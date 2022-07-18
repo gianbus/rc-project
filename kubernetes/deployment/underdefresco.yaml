@@ -182,6 +182,7 @@ spec:
     protocol: TCP
   selector:
     app: underdefresco-getweather
+---
 #apiVersion: networking.k8s.io/v1
 #kind: Ingress
 #metadata:
@@ -207,7 +208,7 @@ spec:
 #            port:
 #              number: 3000
 #      
-      
+---
 
 apiVersion: networking.istio.io/v1alpha3
 kind: Gateway
