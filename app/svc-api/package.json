@@ -1,0 +1,22 @@
+{
+  "name": "rc-project-apiservice",
+  "version": "1.0.0",
+  "description": "",
+  "private": true,
+  "dependencies": {
+    "cookie-parser": "^1.4.6",
+    "dotenv": "^16.0.1",
+    "express": "^4.18.1",
+    "googleapis": "^39.0.0",
+    "pug": "^3.0.2",
+    "pug-bootstrap": "^0.0.16",
+    "request": "^2.88.2"
+  },
+  "engines": {
+    "node": ">=6.4.0"
+  },
+  "scripts": {
+    "start": "node ."
+  },
+  "license": ""
+}
