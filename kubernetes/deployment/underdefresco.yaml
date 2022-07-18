@@ -14,7 +14,7 @@ spec:
       labels:
         app: underdefresco-oauth
     spec:
-      terminationGracePeriodSeconds: 30
+      terminationGracePeriodSeconds: 7200
       containers:
       - name: oauth
         image: underdefresco/oauth:k3s-with-services
@@ -61,7 +61,7 @@ spec:
       labels:
         app: underdefresco-api
     spec:
-      terminationGracePeriodSeconds: 30
+      terminationGracePeriodSeconds: 7200
       containers:
       - name: api
         image: underdefresco/api:k3s-with-services
@@ -93,7 +93,7 @@ spec:
       labels:
         app: underdefresco-getlatlon
     spec:
-      terminationGracePeriodSeconds: 30
+      terminationGracePeriodSeconds: 7200
       containers:
       - name: getlatlon
         image: underdefresco/getlatlon:k3s-with-services

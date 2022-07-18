@@ -93,10 +93,6 @@ jobs:
         run: kubectl apply -f ../../../../underdefresco_key.yaml
         working-directory: .
 
-      - name: Delete modifications to the kubernetes config
-        run: kubectl delete -f underdefresco.yaml
-        working-directory: ./kubernetes/deployment
-
       - name: Apply modifications to the kubernetes config
         run: kubectl apply -f underdefresco.yaml
         working-directory: ./kubernetes/deployment
