@@ -1,5 +1,11 @@
 api_keys.env
 credentials.json
 token.json
+<<<<<<< Updated upstream
+app/node_modules/**
+underdefresco_key.yaml
+=======
 app/node_modules/*
 underdefresco_key.yaml
+.DS_Store
+>>>>>>> Stashed changes

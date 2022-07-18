@@ -1,0 +1,249 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: underdefresco-oauth
+  labels:
+    app: underdefresco-oauth
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: underdefresco-oauth
+  template:
+    metadata:
+      labels:
+        app: underdefresco-oauth
+    spec:
+      terminationGracePeriodSeconds: 7200
+      containers:
+      - name: oauth
+        image: underdefresco/oauth:k3s-with-services
+        imagePullPolicy: "Always"
+        ports:
+        - containerPort: 80
+          protocol: TCP
+        env:
+        - name: CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: mysecret
+              key: CLIENT_ID
+        - name: CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: mysecret
+              key: CLIENT_SECRET
+        - name: REDIRECT_URIS
+          valueFrom:
+            secretKeyRef:
+              name: mysecret
+              key: REDIRECT_URIS
+        - name: VISUAL_WEATHER_KEY
+          valueFrom:
+            secretKeyRef:
+              name: mysecret
+              key: VISUAL_WEATHER_KEY
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: underdefresco-api
+  labels:
+    app: underdefresco-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: underdefresco-api
+  template:
+    metadata:
+      labels:
+        app: underdefresco-api
+    spec:
+      terminationGracePeriodSeconds: 7200
+      containers:
+      - name: api
+        image: underdefresco/api:k3s-with-services
+        imagePullPolicy: "Always"
+        ports:
+        - containerPort: 80
+          protocol: TCP
+        env:
+        - name: PREDICT_KEY
+          valueFrom:
+            secretKeyRef:
+              name: mysecret
+              key: PREDICT_KEY
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: underdefresco-getlatlon
+  labels:
+    app: underdefresco-getlatlon
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: underdefresco-getlatlon
+  template:
+    metadata:
+      labels:
+        app: underdefresco-getlatlon
+    spec:
+      terminationGracePeriodSeconds: 7200
+      containers:
+      - name: getlatlon
+        image: underdefresco/getlatlon:k3s-with-services
+        imagePullPolicy: "Always"
+        ports:
+        - containerPort: 80
+          protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: underdefresco-getweather
+  labels:
+    app: underdefresco-getweather
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: underdefresco-getweather
+  template:
+    metadata:
+      labels:
+        app: underdefresco-getweather
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: getweather
+        image: underdefresco/getweather:k3s-with-services
+        imagePullPolicy: "Always"
+        ports:
+        - containerPort: 80
+          protocol: TCP
+        env:
+        - name: VISUAL_WEATHER_KEY
+          valueFrom:
+            secretKeyRef:
+              name: mysecret
+              key: VISUAL_WEATHER_KEY
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: underdefresco-oauth-service
+  labels:
+    run: underdefresco-oauth-service
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+  selector:
+    app: underdefresco-oauth
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: underdefresco-api-service
+  labels:
+    run: underdefresco-api-service
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+  selector:
+    app: underdefresco-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: latlonservice
+  labels:
+    run: latlonservice
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+  selector:
+    app: underdefresco-getlatlon
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: weatherservice
+  labels:
+    run: weatherservice
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+  selector:
+    app: underdefresco-getweather   
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: underdefresco-gateway
+spec:
+  selector:
+    istio: ingressgateway # use Istio default gateway implementation
+  servers:
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    tls:
+      mode: SIMPLE
+      credentialName: frescocredentials # must be the same as secret
+    hosts:
+    - "{ip_VM}.nip.io"
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: underdefresco-oauth-vs
+spec:
+  hosts:
+  - "{ip_VM}.nip.io"
+  gateways:
+  - underdefresco-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        port:
+          number: 80
+        host: underdefresco-oauth-service
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: underdefresco-api-vs
+spec:
+  hosts:
+  - "{ip_VM}.nip.io"
+  gateways:
+  - underdefresco-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /api/
+    route:
+    - destination:
+        port:
+          number: 80
+        host: underdefresco-api-service
+---
