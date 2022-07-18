@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: oauth
-        image: underdefresco/oauth
+        image: underdefresco/oauth:k3s-with-services
         ports:
         - containerPort: 80
           protocol: TCP
@@ -60,7 +60,7 @@ spec:
     spec:
       containers:
       - name: api
-        image: underdefresco/api
+        image: underdefresco/api:k3s-with-services
         ports:
         - containerPort: 80
           protocol: TCP
@@ -89,7 +89,7 @@ spec:
     spec:
       containers:
       - name: getlatlon
-        image: underdefresco/getlatlon
+        image: underdefresco/getlatlon:k3s-with-services
         ports:
         - containerPort: 80
           protocol: TCP
@@ -112,7 +112,7 @@ spec:
     spec:
       containers:
       - name: getweather
-        image: underdefresco/getweather
+        image: underdefresco/getweather:k3s-with-services
         ports:
         - containerPort: 80
           protocol: TCP
