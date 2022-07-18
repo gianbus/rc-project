@@ -34,7 +34,7 @@ jobs:
       - name: Build and push Docker image underdefresco/weather
         uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
         with:
-          context: ./app/svc-oauth
+          context: ./app/micro-svc-getWeather
           push: true
           tags: ${{ steps.meta_weather.outputs.tags }}
           labels: ${{ steps.meta_weather.outputs.labels }}
@@ -50,7 +50,7 @@ jobs:
       - name: Build and push Docker image underdefresco/oauth
         uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
         with:
-          context: ./app/svc-api
+          context: ./app/svc-oauth
           push: true
           tags: ${{ steps.meta_oauth.outputs.tags }}
           labels: ${{ steps.meta_oauth.outputs.labels }}
@@ -65,7 +65,7 @@ jobs:
       - name: Build and push Docker image underdefresco/api
         uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
         with:
-          context: ./app/micro-svc-getWeather
+          context: ./app/svc-api
           push: true
           tags: ${{ steps.meta_api.outputs.tags }}
           labels: ${{ steps.meta_api.outputs.labels }}
