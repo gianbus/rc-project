@@ -70,12 +70,12 @@ function linkWeatherToEvents(res, events){
 
         console.log(i + ` - ${start} - ${event.summary}`); //print the event Summary
 
-        request.get(`http://latlonservice?location=${events[i].location}`,  (err_coord, res_coord, body_coord)=> {
+        request.get(`latlonservice.default.svc.cluster.local:80?location=${events[i].location}`,  (err_coord, res_coord, body_coord)=> {
           let lat = (JSON.parse(body_coord)).lat;
           let lon = (JSON.parse(body_coord)).lon;
 
           if(lat && lon){
-            request.get(`http://weatherservice?lat=${lat}&lon=${lon}&time=${toTimestamp(start)}`, (err_weather, res_weather, body_weather) => {
+            request.get(`http://weatherservice.default.svc.cluster.local:80?lat=${lat}&lon=${lon}&time=${toTimestamp(start)}`, (err_weather, res_weather, body_weather) => {
             let data = JSON.parse(body_weather).weather;
               if(data){ //if the weather is found
                 let hour = event.start.date?0:(new Date(start)).getHours();
@@ -183,11 +183,6 @@ app.get('/', function(req, res){ //index page
     authorize(req, res, getEvents);
   }
 
-});
-
-app.get('/test', function(req, res){ //index page
-  //console.log(req.cookies);
-  res.send("ciaociao1");
 });
 
 app.get('/logout', function(req, res){ //index page

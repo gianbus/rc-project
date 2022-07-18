@@ -62,7 +62,7 @@ function apiWeatherEvents(req,res,category =""){
   }else{
     var counter = 0;
     console.log(req.query.location)
-    request.get(`http://latlonservice?location=${req.query.location}`,  (err_coord, res_coord, body_coord)=> {   
+    request.get(`http://latlonservice.default.svc.cluster.local:80?location=${req.query.location}`,  (err_coord, res_coord, body_coord)=> {   
       let lat = (JSON.parse(body_coord)).lat;
       let lon = (JSON.parse(body_coord)).lon;
       if(lat && lon){
@@ -70,7 +70,7 @@ function apiWeatherEvents(req,res,category =""){
           console.log(body);
           if(body.results.length > 0){
             body.results.map((event,i) => {
-              request.get(`http://weatherservice?lat=${lat}&lon=${lon}&time=${toTimestamp(event.start)}`, (err_weather, res_weather, body_weather) => {
+              request.get(`http://weatherservice.default.svc.cluster.local:80?lat=${lat}&lon=${lon}&time=${toTimestamp(event.start)}`, (err_weather, res_weather, body_weather) => {
                 let weather = JSON.parse(body_weather).weather;
                   if(weather != null){
                     let hour = (new Date(event.start)).getHours();
