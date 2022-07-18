@@ -62,7 +62,7 @@ function linkWeatherToEvents(res, events){
   var counter = 0;
   if(events.length){ //if there are events
     console.log('Upcoming events:');
-
+    res.send("ciao");
     events.forEach((event, i) => { //for each event
       const start = event.start.dateTime || event.start.date;
       events[i].weather = {}; //add empty weather data to the event
@@ -191,15 +191,6 @@ app.get('/logout', function(req, res){ //index page
   //console.log(req.cookies);
   res.clearCookie('cookieToken');
   res.redirect('/');
-});
-
-app.get('/test', function(req, res){ //index page
-  res.render('index', { lacacca: 'cacca' });
-});
-
-app.get('/image', function(req, res){ //index page
-  if(req.query.img)
-    res.sendFile( __dirname + '/views/icons/'+ req.query.img + '.png');
 });
 
 app.get('/weather', function(req, res){ //index page
