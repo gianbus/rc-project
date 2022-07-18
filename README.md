@@ -39,7 +39,6 @@ Inoltre il servizio fornisce una serie di __API Pubbliche__ sempre in ottica rea
 
 ![alt text](./funzionalità_principale.svg)
 
-
 3. __Il progetto deve prevedere l'uso di Docker e l'automazione del processo di lancio, configurazione e test.__ (requisito 6)
     - La nostra webapp utilizza Docker:
         - Ogni immagine dei pod costituenti i services di kubernetes viene costruita tramite l'utilizzo di un Dockerfile e successivamente pushata su DockerHub
