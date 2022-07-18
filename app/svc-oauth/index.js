@@ -191,6 +191,13 @@ app.get('/logout', function(req, res){ //index page
   res.redirect('/');
 });
 
+app.get('/image', function(req, res){ //index page
+  //console.log(req.cookies);
+  if(req.query.img){
+    res.sendFile(__dirname + '/views/icons/' + req.query.img + '.png');
+  }
+});
+
 app.get('/weather', function(req, res){ //index page
   request.get(`http://weatherservice.default.svc.cluster.local:80?lat=${req.query.lat}&lon=${req.query.lon}&time=${req.query.time}`, (err_weather, res_weather, body_weather) => {
     let data = (JSON.parse(body_weather)).weather;
