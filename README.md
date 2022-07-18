@@ -18,7 +18,7 @@ Inoltre il servizio fornisce una serie di __API Pubbliche__ sempre in ottica rea
 
 ## Architettura di riferimento
 
-![alt text](./architettura_di_riferimento.svg)
+![alt text](./cluster_kubernetes.png)
 
 ---
 
