@@ -29,14 +29,14 @@ jobs:
         id: meta_weather
         uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
         with:
-          images: underdefresco/getweather:latest
+          images: underdefresco/getweather
       
       - name: Build and push Docker image underdefresco/weather
         uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
         with:
           context: ./app/micro-svc-getWeather
           push: true
-          tags: ${{ steps.meta_weather.outputs.tags }}
+          tags: latest
           labels: ${{ steps.meta_weather.outputs.labels }}
 
 
@@ -45,14 +45,14 @@ jobs:
         id: meta_oauth
         uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
         with:
-          images: underdefresco/oauth:latest
+          images: underdefresco/oauth
       
       - name: Build and push Docker image underdefresco/oauth
         uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
         with:
           context: ./app/svc-oauth
           push: true
-          tags: ${{ steps.meta_oauth.outputs.tags }}
+          tags: latest
           labels: ${{ steps.meta_oauth.outputs.labels }}
       
 
@@ -60,28 +60,28 @@ jobs:
         id: meta_api
         uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
         with:
-          images: underdefresco/api:latest
+          images: underdefresco/api
       
       - name: Build and push Docker image underdefresco/api
         uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
         with:
           context: ./app/svc-api
           push: true
-          tags: ${{ steps.meta_api.outputs.tags }}
+          tags: latest
           labels: ${{ steps.meta_api.outputs.labels }}
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta_latlon
         uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
         with:
-          images: underdefresco/getlatlon:latest
+          images: underdefresco/getlatlon
       
       - name: Build and push Docker image underdefresco/getlatlon
         uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
         with:
           context: ./app/micro-svc-getLatLon
           push: true
-          tags: ${{ steps.meta_latlon.outputs.tags }}
+          tags: latest
           labels: ${{ steps.meta_latlon.outputs.labels }}
 
   pull_from_repo:
@@ -102,6 +102,6 @@ jobs:
 
       - name: Apply modifications to the kubernetes config
         run: kubectl apply -f underdefresco.yaml
-        working-directory: ./kubernetes/deployment/
+        working-directory: ./kubernetes/deployment
         
 
