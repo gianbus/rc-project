@@ -92,12 +92,17 @@ jobs:
       - name: Check out the repo
         uses: actions/checkout@v3
 
+
+      - name: Apply secret to the  cluster 
+        run: ls
+        working-directory: ./kubernetes
+
       - name: Apply secret to the  cluster 
         run: kubectl apply -f underdefresco_key.yaml
-        working-directory: ./kubernetes/
+        working-directory: ./kubernetes
 
       - name: Apply modifications to the kubernetes config
         run: kubectl apply -f underdefresco.yaml
-        working-directory: ./kubernetes/ 
+        working-directory: ./kubernetes
         
 
