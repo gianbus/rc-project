@@ -96,7 +96,6 @@ jobs:
       - name: Apply secret to the  cluster 
         run: ls ../../../../
         working-directory: ./
-        
 
       - name: Apply secret to the  cluster 
         run: kubectl apply -f ../../../../underdefresco_key.yaml
