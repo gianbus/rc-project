@@ -29,7 +29,7 @@ jobs:
         id: meta_weather
         uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
         with:
-          images: underdefresco/getweather
+          images: underdefresco/getweather:latest
       
       - name: Build and push Docker image underdefresco/weather
         uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
@@ -45,7 +45,7 @@ jobs:
         id: meta_oauth
         uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
         with:
-          images: underdefresco/oauth
+          images: underdefresco/oauth:latest
       
       - name: Build and push Docker image underdefresco/oauth
         uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
@@ -60,7 +60,7 @@ jobs:
         id: meta_api
         uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
         with:
-          images: underdefresco/api
+          images: underdefresco/api:latest
       
       - name: Build and push Docker image underdefresco/api
         uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
@@ -74,7 +74,7 @@ jobs:
         id: meta_latlon
         uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
         with:
-          images: underdefresco/getlatlon
+          images: underdefresco/getlatlon:latest
       
       - name: Build and push Docker image underdefresco/getlatlon
         uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
