@@ -15,8 +15,8 @@ spec:
         app: underdefresco-oauth
     spec:
       containers:
-      - name: nodejs-oauth
-        image: valeriobosco/underdefresco
+      - name: oauth
+        image: underdefresco/oauth
         ports:
         - containerPort: 80
           protocol: TCP
@@ -41,11 +41,6 @@ spec:
             secretKeyRef:
               name: mysecret
               key: VISUAL_WEATHER_KEY
-        - name: PREDICT_KEY
-          valueFrom:
-            secretKeyRef:
-              name: mysecret
-              key: PREDICT_KEY
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -64,38 +59,69 @@ spec:
         app: underdefresco-api
     spec:
       containers:
-      - name: nodejs-api
-        image: valeriobosco/underdefresco
+      - name: api
+        image: underdefresco/api
         ports:
         - containerPort: 80
           protocol: TCP
         env:
-        - name: CLIENT_ID
-          valueFrom:
-            secretKeyRef:
-              name: mysecret
-              key: CLIENT_ID
-        - name: CLIENT_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: mysecret
-              key: CLIENT_SECRET
-        - name: REDIRECT_URIS
-          valueFrom:
-            secretKeyRef:
-              name: mysecret
-              key: REDIRECT_URIS
-        - name: VISUAL_WEATHER_KEY
-          valueFrom:
-            secretKeyRef:
-              name: mysecret
-              key: VISUAL_WEATHER_KEY
         - name: PREDICT_KEY
           valueFrom:
             secretKeyRef:
               name: mysecret
               key: PREDICT_KEY
-
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: underdefresco-getlatlon
+  labels:
+    app: underdefresco-getlatlon
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: underdefresco-getlatlon
+  template:
+    metadata:
+      labels:
+        app: underdefresco-getlatlon
+    spec:
+      containers:
+      - name: getlatlon
+        image: underdefresco/getlatlon
+        ports:
+        - containerPort: 80
+          protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: underdefresco-getweather
+  labels:
+    app: underdefresco-getweather
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: underdefresco-getweather
+  template:
+    metadata:
+      labels:
+        app: underdefresco-getweather
+    spec:
+      containers:
+      - name: getweather
+        image: underdefresco/getweather
+        ports:
+        - containerPort: 80
+          protocol: TCP
+        env:
+        - name: VISUAL_WEATHER_KEY
+          valueFrom:
+            secretKeyRef:
+              name: mysecret
+              key: VISUAL_WEATHER_KEY
 ---
 apiVersion: v1
 kind: Service
@@ -106,12 +132,11 @@ metadata:
 spec:
   type: LoadBalancer
   ports:
-  - port: 3000
+  - port: 80
     targetPort: 80
     protocol: TCP
   selector:
     app: underdefresco-oauth
-
 ---
 apiVersion: v1
 kind: Service
@@ -122,14 +147,41 @@ metadata:
 spec:
   type: LoadBalancer
   ports:
-  - port: 3001
+  - port: 80
     targetPort: 80
     protocol: TCP
   selector:
     app: underdefresco-api
-
-
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: latlonservice
+  labels:
+    run: latlonservice
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+  selector:
+    app: underdefresco-getlatlon
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: weatherservice
+  labels:
+    run: weatherservice
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+  selector:
+    app: underdefresco-getweather
 #apiVersion: networking.k8s.io/v1
 #kind: Ingress
 #metadata:
@@ -191,7 +243,7 @@ spec:
     route:
     - destination:
         port:
-          number: 3000
+          number: 80
         host: underdefresco-oauth-service
 ---
 
@@ -211,6 +263,6 @@ spec:
     route:
     - destination:
         port:
-          number: 3001
+          number: 80
         host: underdefresco-api-service
 
