@@ -1,7 +1,5 @@
 # Project-frsco
 
-![example workflow](https://github.com/Zeplicious/Pho2Song/actions/workflows/node.js.yml/badge.svg)
-![example workflow](https://github.com/Zeplicious/Pho2Song/actions/workflows/dockerAPI.yml/badge.svg)
 
 
 ## Scopo del progetto
@@ -37,7 +35,7 @@ Inoltre il servizio fornisce una serie di __API Pubbliche__ sempre in ottica rea
         3. VisualCrossing;
         4. PredictHQ;
 
-![alt text](./funzionalità_principale.svg)
+
 
 3. __Il progetto deve prevedere l'uso di Docker e l'automazione del processo di lancio, configurazione e test.__ (requisito 6)
     - La nostra webapp utilizza Docker:
