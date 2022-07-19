@@ -69,7 +69,7 @@ git clone https://github.com/gianbus/rc-project
 e posizionarsi nella root directory del git.
 
 
-- Creare una applicazione su [Google Cloud Platformm](https://console.cloud.google.com), inserire tra i callback uri `http://<host>:<port>/`  ed inserire tra i servizi abilitati Google Calendar API.
+- Creare una applicazione su [Google Cloud Platformm](https://console.cloud.google.com), inserire tra i callback uri `https://<host>:<port>/`  ed inserire tra i servizi abilitati Google Calendar API.
 - Creare un account su [Visual Crossing](https://www.visualcrossing.com/weather-api) per ottenere la key che dà accesso alle API.
 - Creare un account su [PredictHQ](https://www.predicthq.com/apis) per ottenere la key che dà accesso alle API.
 
