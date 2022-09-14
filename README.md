@@ -4,7 +4,7 @@
 
 ## Scopo del progetto
 
-__Project-frsco__ è una web application che gira in un cluster Kubernetes mediante implementazione di microservizi, che si occupa di __associare ad un determinato evento le sue previsioni meteo__. Attraverso la funzionalità principale, __Project-frsco__ si collega al google calendar dell'utente attraverso l'uso di protocollo oAuth e elabora gli eventi della successiva settimana analizzandone la posizione (mediante uso di API __OpenStreetMap__) al fine di valutarne le condizioni meteo (mediante uso di API __VisualCrossing__ nella sua diramazione weather). L'interfaccia grafica, implementata mediante view .pug, mostra dunque all'utente una versione semplificata del proprio __google calendar__ stilizzando le caratteristiche meteo mediante l'uso di icone di facile interpretazione e provvedendo un sunto dell'evento. Inoltre le singole attività  (provviste di una __locazione valida__) possono essere arricchite di dettaglio attraverso un semplice click sulla interfaccia di evento fornita all'utente (o anche tramite URL). Ovviamente suddetto comportamento non sussiste in presenza di locazioni non identificabili per mezzo delle __API pubbliche di terzi utilizzate__.
+__Project-frsco__ è una web application che gira in un cluster Kubernetes mediante implementazione di microservizi, che si occupa di __associare ad un determinato evento le sue previsioni meteo__. Attraverso la funzionalità principale, __Project-frsco__ si collega al google calendar dell'utente attraverso l'uso di protocollo oAuth e elabora gli eventi della successiva settimana analizzandone la posizione (mediante uso di API __OpenStreetMap__) al fine di valutarne le condizioni meteo (mediante uso di API __VisualCrossing__ weather). L'interfaccia grafica, implementata mediante view .pug, mostra dunque all'utente una versione semplificata del proprio __google calendar__ stilizzando le caratteristiche meteo mediante l'uso di icone di facile interpretazione e provvedendo un sunto dell'evento. Inoltre le previsioni meteo delle singole attività (provviste di una __locazione valida__) possono essere arricchite di dettaglio attraverso un semplice click sulla interfaccia di evento fornita all'utente (o anche tramite URL). Ovviamente suddetto comportamento non sussiste in presenza di locazioni non identificabili per mezzo delle __API pubbliche di terzi utilizzate__.
 
 Inoltre il servizio fornisce una serie di __API Pubbliche__ sempre in ottica realizzazione di una app a valore aggiunto, mediante l'utilizzo delle seguenti __API__:
  
@@ -34,8 +34,6 @@ Inoltre il servizio fornisce una serie di __API Pubbliche__ sempre in ottica rea
         2. OpenStreetMap;
         3. VisualCrossing;
         4. PredictHQ;
-
-
 
 3. __Il progetto deve prevedere l'uso di Docker e l'automazione del processo di lancio, configurazione e test.__ (requisito 6)
     - La nostra webapp utilizza Docker:
@@ -148,7 +146,7 @@ kubectl create -n istio-system secret tls frescocredentials --key={example.com}.
 ### Deployment applicazione
 Dopo aver opportunamente sostituito le voci {ip_VM} (nel file rc-project/kubernetes/deployment/underdefresco.yaml) con l'ip della vostra Virtual Machine, e quindi recatici nella stessa directory, per effettuare l'apply di tutti i Deployments, Services, VirtualServices e Gateways che compongono l'applicazione basta utilizzare il comando:
 ```
-kubectl apply -f underdefresco.yml
+kubectl apply -f underdefresco.yaml
 ```
 
 ### Analisi del traffico e installazione addons Jaeger e Kiali
@@ -161,7 +159,7 @@ kubectl rollout status deployment/kiali -n istio-system
 Successivamente per esporre i servizi in rete sono necessarie le applicazioni dei file kiali.yaml e jaeger.yaml contenuti nella cartella rc-poject/kubernetes/deployment/ e dopo aver sostituito opportunamente le voci {ip_VM} con l'IP esterno della vostra Macchina Virtuale.
 Questo può essere effettuato, dopo essersi recati nella directory sopracitata, con i comandi:
 ```
-kubectl apply -f kiali.yml
-kubectl apply -f tracing.yml
+kubectl apply -f kiali.yaml
+kubectl apply -f tracing.yaml
 ```
 
