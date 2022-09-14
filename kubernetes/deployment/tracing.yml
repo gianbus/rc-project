@@ -15,7 +15,7 @@ spec:
       mode: SIMPLE
       credentialName: frescocredentials
     hosts:
-    - "tracing.{ip_VM}.io"
+    - "tracing.{ip_VM}.nip.io"
 ---
 apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
@@ -24,7 +24,7 @@ metadata:
   namespace: istio-system
 spec:
   hosts:
-  - "tracing.{ip_VM}.io"
+  - "tracing.{ip_VM}.nip.io"
   gateways:
   - tracing-gateway
   http:
